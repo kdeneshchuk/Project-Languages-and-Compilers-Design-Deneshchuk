@@ -1,11 +1,11 @@
 """Telly parser: recursive descent, one function per grammar rule."""
 
-from lexer import CompileError
+from lexer import CompileError, number_value, MAX_LONG
 from ast_nodes import *
 
 TRUE_TEXTS = ("yes", "\U0001F44D")
 EQ_TEXTS = ("equals", "\U0001F7F0")
-
+INT_MAX = 2147483647
 
 class Parser:
     def __init__(self, tokens):
@@ -56,7 +56,7 @@ class Parser:
             self.error("expected a number, a truth value or a name, found end of file")
         if tok.kind == "number":
             self.eat()
-            return NumberNode(tok.line, tok.col, int(tok.text))
+            return NumberNode(tok.line, tok.col, number_value(tok.text))
         if tok.kind == "bool":
             return self.parse_boolean()
         if tok.kind == "ident":
@@ -88,9 +88,6 @@ class Parser:
 
     # ---------- types and literals ----------
 
-    INT_MAX = 2147483647
-    LONG_MAX = 9223372036854775807
-
     def parse_type(self):                    # type ::= "int" | "long" | "flag"
         tok = self.expect("type", "a type (int, long or flag)")
         return tok.text
@@ -99,7 +96,7 @@ class Parser:
         tok = self.peek()
         if tok is not None and tok.kind == "number":
             self.eat()
-            return NumberNode(tok.line, tok.col, int(tok.text))
+            return NumberNode(tok.line, tok.col, number_value(tok.text))
         if tok is not None and tok.kind == "bool":
             return self.parse_boolean()
         if tok is None:
@@ -110,7 +107,7 @@ class Parser:
         """Stage 1 overflow check: only a bare number literal next to its type."""
         if not isinstance(node, NumberNode):
             return
-        limit = self.INT_MAX if type_name == "int" else self.LONG_MAX
+        limit = INT_MAX if type_name == "int" else MAX_LONG
         if type_name in ("int", "long") and node.value > limit:
             raise CompileError(
                 f"line {node.line}:{node.col}: number {node.value} does not fit in {type_name}")

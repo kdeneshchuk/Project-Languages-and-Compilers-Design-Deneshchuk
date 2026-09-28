@@ -56,6 +56,10 @@ def describe_byte(b):
         return repr(chr(b))
     return f"0x{b:02X}"
 
+def number_value(text):
+    """int() of a digit string; leading zeros do not count against Python's digit limit."""
+    return int(text.lstrip("0") or "0")
+
 
 def lex(data: bytes):
     """Return a flat list of tokens. Columns are 1-based and count bytes."""
@@ -104,9 +108,11 @@ def lex(data: bytes):
                     f"line {sline}:{scol}: a letter or '_' directly after digits")
             else:
                 word = data[start:i].decode()
-                if int(word) > MAX_LONG:
+                digits = word.lstrip("0") or "0"
+                if len(digits) > 19 or int(digits) > MAX_LONG:
+                    shown = word if len(word) <= 25 else word[:20] + "..."
                     raise CompileError(
-                        f"line {sline}:{scol}: number {word} does not fit in long")
+                        f"line {sline}:{scol}: number {shown} does not fit in long")
                 tokens.append(Token("number", word, sline, scol))
                 state = "START"
                 continue

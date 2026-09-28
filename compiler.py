@@ -6,6 +6,8 @@ USAGE = "usage: compiler.py [--ast | --tokens] input.txt"
 
 
 def main_cli():
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     args = sys.argv[1:]
     mode = None
     if args and args[0] in ("--ast", "--tokens"):
@@ -35,6 +37,9 @@ def main_cli():
         tree = Parser(tokens).parse_program()
     except CompileError as e:
         print(f"compilation error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except RecursionError:
+        print("compilation error: nesting is too deep", file=sys.stderr)
         sys.exit(1)
 
     if mode == "--ast":
