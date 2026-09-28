@@ -1,0 +1,2 @@
+once int x was 2 + 3 * 4.
+tell x.

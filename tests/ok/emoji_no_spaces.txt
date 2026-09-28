@@ -1,0 +1,3 @@
+once int a was 1.
+once flag f was a🟰1.
+tell f.

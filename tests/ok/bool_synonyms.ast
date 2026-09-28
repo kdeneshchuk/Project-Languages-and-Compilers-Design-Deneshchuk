@@ -1,0 +1,11 @@
+Program
+  ConstDecl A flag
+    Bool true
+  ConstDecl B flag
+    Bool false
+  ConstDecl C flag
+    Bool true
+  ConstDecl D flag
+    Bool false
+  Tell
+    Var A

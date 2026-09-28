@@ -1,0 +1,6 @@
+once int endless was 1.
+once int tellme was 2.
+once int isx was 3.
+once int Tell was 4.
+once int YES was 5.
+tell endless.

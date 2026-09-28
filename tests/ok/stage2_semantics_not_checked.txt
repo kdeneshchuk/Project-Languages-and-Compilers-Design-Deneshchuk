@@ -1,0 +1,8 @@
+x became y + 1.
+once flag f was 5.
+once int n was yes.
+always flag c is 7.
+when 5:
+    n became 1.
+end.
+tell z.

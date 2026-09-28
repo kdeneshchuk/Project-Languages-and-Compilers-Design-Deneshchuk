@@ -1,0 +1,7 @@
+Program
+  VarDecl _tmp int const
+    Number 1
+  VarDecl a_1 int const
+    Number 2
+  Tell
+    Var _tmp

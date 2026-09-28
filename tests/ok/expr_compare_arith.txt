@@ -1,0 +1,2 @@
+once flag r was x + 1 equals y * 2.
+tell r.

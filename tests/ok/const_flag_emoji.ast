@@ -1,0 +1,5 @@
+Program
+  ConstDecl READY flag
+    Bool true
+  Tell
+    Var READY

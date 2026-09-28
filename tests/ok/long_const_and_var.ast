@@ -1,0 +1,7 @@
+Program
+  ConstDecl BIG long
+    Number 3000000000
+  VarDecl n long mut
+    Number 3000000000
+  Tell
+    Var n

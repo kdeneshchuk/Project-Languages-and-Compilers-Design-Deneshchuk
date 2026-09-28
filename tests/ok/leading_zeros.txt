@@ -1,0 +1,2 @@
+once int x was 007.
+tell x.

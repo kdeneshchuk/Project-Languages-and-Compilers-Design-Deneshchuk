@@ -1,0 +1,7 @@
+Program
+  VarDecl ok flag mut
+    Bool false
+  Assign ok
+    Bool true
+  Tell
+    Var ok

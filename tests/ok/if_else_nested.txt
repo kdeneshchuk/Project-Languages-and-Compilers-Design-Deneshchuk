@@ -1,0 +1,11 @@
+once changing int x was 5.
+when x equals 5:
+    when x differs 6:
+        x became 1.
+    otherwise:
+        x became 2.
+    end.
+otherwise:
+    x became 3.
+end.
+tell x.

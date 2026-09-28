@@ -1,0 +1,2 @@
+once flag f was a equals b equals c.
+tell f.

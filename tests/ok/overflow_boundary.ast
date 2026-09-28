@@ -1,0 +1,7 @@
+Program
+  VarDecl m int const
+    Number 2147483647
+  VarDecl n long const
+    Number 9223372036854775807
+  Tell
+    Var m
