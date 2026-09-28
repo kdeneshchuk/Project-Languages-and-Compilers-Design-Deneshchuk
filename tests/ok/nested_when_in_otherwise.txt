@@ -1,0 +1,10 @@
+once changing int x was 1.
+when x equals 9:
+    x became 2.
+otherwise:
+    when x differs 9:
+        x became 3.
+    end.
+    x became x + 1.
+end.
+tell x.

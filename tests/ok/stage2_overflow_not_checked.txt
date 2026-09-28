@@ -1,0 +1,4 @@
+once int big was 3000000000 + 1.
+once changing int x was 1.
+x became 3000000000.
+tell x.

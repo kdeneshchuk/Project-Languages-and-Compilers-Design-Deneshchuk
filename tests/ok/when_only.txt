@@ -1,0 +1,5 @@
+once changing int x was 1.
+when x equals 1:
+    x became 2.
+end.
+tell x.

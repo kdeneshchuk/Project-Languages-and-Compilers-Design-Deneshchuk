@@ -1,0 +1,27 @@
+{
+  "name": "telly",
+  "displayName": "Telly Language Support",
+  "description": "Highlighting, emoji completion and snippets for the Telly language",
+  "version": "0.0.1",
+  "publisher": "kdeneshchuk",
+  "engines": { "vscode": "^1.80.0" },
+  "main": "./extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [{
+      "id": "telly",
+      "aliases": ["Telly"],
+      "extensions": [".telly"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "telly",
+      "scopeName": "source.telly",
+      "path": "./syntaxes/telly.tmLanguage.json"
+    }],
+    "snippets": [{
+      "language": "telly",
+      "path": "./snippets/telly.json"
+    }]
+  }
+}

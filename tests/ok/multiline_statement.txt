@@ -1,0 +1,4 @@
+once int total was
+    1 +
+    2 * 3.
+tell total.

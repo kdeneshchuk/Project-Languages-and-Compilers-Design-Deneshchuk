@@ -1,0 +1,2 @@
+once int x is 1.
+tell x.

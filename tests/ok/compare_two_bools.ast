@@ -1,0 +1,11 @@
+Program
+  VarDecl a flag const
+    BinOp ==
+      Bool true
+      Bool false
+  VarDecl b flag const
+    BinOp !=
+      Bool true
+      Bool false
+  Tell
+    Var a

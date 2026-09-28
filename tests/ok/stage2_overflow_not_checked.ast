@@ -1,0 +1,11 @@
+Program
+  VarDecl big int const
+    BinOp +
+      Number 3000000000
+      Number 1
+  VarDecl x int mut
+    Number 1
+  Assign x
+    Number 3000000000
+  Tell
+    Var x

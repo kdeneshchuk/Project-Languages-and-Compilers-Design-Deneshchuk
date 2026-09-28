@@ -1,0 +1,2 @@
+once flag x was 5 equals.
+tell x.
