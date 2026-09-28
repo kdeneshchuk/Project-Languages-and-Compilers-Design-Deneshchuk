@@ -64,9 +64,11 @@ operators of equal precedence group from left to right. There are no
 parentheses and no division.
 
 ```
-once int a was 2 + 3 * 4.      a is 14
-once int b was 10 - 3 - 2.     b is 5
+once int a was 2 + 3 * 4.
+once int b was 10 - 3 - 2.
 ```
+
+Here `a` is 14 and `b` is 5.
 
 A comparison gives a `flag`. It binds weaker than arithmetic, and there is at
 most one per expression.
@@ -96,7 +98,7 @@ once flag r was 👍.
 
 `when` takes a condition, a colon and a block; `otherwise` and its block are
 optional; `end.` closes the sentence. Each block holds at least one statement,
-and conditions can be nested.
+and conditions can be nested, up to 100 levels deep.
 
 ```
 when score 🟰 100:
@@ -107,11 +109,11 @@ otherwise:
 end.
 ```
 
-### Printing and ending the program
+### Reporting the result and ending the program
 
-`tell` prints one value and ends the program. It takes a number, a truth
-value or a name, never an operation, and it is the last statement of every
-program.
+`tell` names the value the program reports at the end. Stage 1 only parses
+it; running the program comes in stage 2. It takes a number, a truth value or
+a name, never an operation, and it is the last statement of every program.
 
 ```
 tell score.
@@ -122,10 +124,13 @@ tell score.
 A number written next to its type must fit in it:
 
 ```
-once int x was 2147483647.       accepted
-once int y was 2147483648.       compilation error
-once long z was 9223372036854775808.    compilation error, too big for long
+once int x was 2147483647.
+once long y was 3000000000.
 ```
+
+Both are accepted. `once int z was 2147483648.` is a compilation error because
+the number does not fit in `int`, and a number above 9223372036854775807 does
+not fit even in `long`.
 
 ### Reserved words
 
@@ -143,8 +148,10 @@ anything after `tell`, and comments. Each of these is a compilation error.
 
 ## Running the compiler
 
-Python 3.8 or newer is the only requirement. There is nothing to install and
-nothing to build.
+Python 3.10 or newer (developed and tested on 3.12) is the only requirement.
+There is nothing to install and nothing to build. On Python 3.9 and older the
+standard library had a module called `parser`, which can shadow this project's
+`parser.py`.
 
 ```bash
 python3 compiler.py --ast examples/age.telly    # print the AST
@@ -181,11 +188,11 @@ test and a summary, and exits with a non-zero code if anything failed.
 PASS  ok/if_else_nested
 FAIL  err/missing_end
 
-93 of 94 tests passed
+95 of 96 tests passed
 failed: err/missing_end
 ```
 
-There are 38 valid and 56 invalid programs. Every feature of the language is
+There are 39 valid and 57 invalid programs. Every feature of the language is
 covered from both sides.
 
 ## How it is built
