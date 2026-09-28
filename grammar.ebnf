@@ -37,7 +37,8 @@ boolean     ::= "yes" | "no" | "👍" | "👎"
 
 (* ident  : letters, digits and '_', not starting with a digit,
             and not a reserved word                                *)
-(* number : decimal digits only, no sign                           *)
+(* number : decimal digits only, no sign; a letter or '_' directly
+             after the digits is a lexical error (10x)              *)
 
 (* reserved words:
      always  once  changing  is  was  became
@@ -60,8 +61,8 @@ boolean     ::= "yes" | "no" | "👍" | "👎"
 (* Overflow check, done in stage 1:
    - a number larger than 9223372036854775807 is a lexical error,
      it does not fit even in "long";
-   - a number standing alone on the right side of "is", "was" or
-     "became" must fit the declared type:
+   - a number standing alone on the right side of "is" or "was"
+     must fit the type written in the same declaration:
        int  : 0 .. 2147483647
        long : 0 .. 9223372036854775807
    - there is no sign, so a literal is never negative.              *)
@@ -69,5 +70,6 @@ boolean     ::= "yes" | "no" | "👍" | "👎"
 (* Checked in stage 2, not by the grammar:
    - the condition of "when" is a boolean expression;
    - types of whole expressions (5 + 3000000000 stored in an "int");
+   - overflow of a value assigned with "became";
    - a name is declared once and before its first use;
    - only a "once changing" variable may be assigned.               *)
