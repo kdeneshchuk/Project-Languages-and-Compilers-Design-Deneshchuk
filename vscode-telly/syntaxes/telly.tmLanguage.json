@@ -1,0 +1,22 @@
+{
+  "scopeName": "source.telly",
+  "name": "Telly",
+  "patterns": [
+    { "name": "keyword.control.telly",
+      "match": "\\b(when|otherwise|end|tell)\\b" },
+    { "name": "keyword.declaration.telly",
+      "match": "\\b(always|once|changing|is|was|became)\\b" },
+    { "name": "storage.type.telly",
+      "match": "\\b(int|long|flag)\\b" },
+    { "name": "constant.language.boolean.telly",
+      "match": "\\b(yes|no)\\b|👍|👎" },
+    { "name": "keyword.operator.comparison.telly",
+      "match": "\\b(equals|differs)\\b|🟰|🚫" },
+    { "name": "constant.numeric.telly",
+      "match": "\\b[0-9]+\\b" },
+    { "name": "keyword.operator.arithmetic.telly",
+      "match": "[+\\-*]" },
+    { "name": "punctuation.telly",
+      "match": "[:.]" }
+  ]
+}
