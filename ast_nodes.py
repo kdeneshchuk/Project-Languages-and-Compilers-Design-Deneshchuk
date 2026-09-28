@@ -143,7 +143,7 @@ class WhenNode(StmtNode):
         return kids
 
 
-class TellNode(ASTNode):
+class TellNode(StmtNode):
     def __init__(self, line, col, value):
         super().__init__(line, col)
         self.value = value

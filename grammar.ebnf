@@ -33,6 +33,16 @@ compare_op  ::= "equals" | "differs" | "🟰" | "🚫"
 literal     ::= number | boolean
 boolean     ::= "yes" | "no" | "👍" | "👎"
 
+ident       ::= ( letter | "_" ) { letter | digit | "_" }
+number      ::= digit { digit }
+letter      ::= "a" .. "z" | "A" .. "Z"
+digit       ::= "0" .. "9"
+
+(* "x" .. "y" means any single character from x to y. *)
+
+(* ident, number, letter and digit are lexical rules: the lexer recognises
+   them, so the parser has no function for them.                         *)
+
 (* ---------- terminals produced by the lexer ---------- *)
 
 (* ident  : letters, digits and '_', not starting with a digit,
@@ -52,8 +62,8 @@ boolean     ::= "yes" | "no" | "👍" | "👎"
 
 (* other tokens: + - * : .                                         *)
 
-(* whitespace (space, tab, newline) separates tokens and is dropped;
-   a statement may span several lines, the '.' ends it.
+(* whitespace (space, tab, carriage return, newline) separates tokens
+   and is dropped; a statement may span several lines, the '.' ends it.
    there are no comments.                                          *)
 
 (* ---------- context conditions (not expressible in EBNF) ---------- *)
@@ -65,7 +75,8 @@ boolean     ::= "yes" | "no" | "👍" | "👎"
      must fit the type written in the same declaration:
        int  : 0 .. 2147483647
        long : 0 .. 9223372036854775807
-   - there is no sign, so a literal is never negative.              *)
+   - there is no sign, so a literal is never negative.
+   - "when" blocks may be nested at most 100 levels deep.            *)
 
 (* Checked in stage 2, not by the grammar:
    - the condition of "when" is a boolean expression;

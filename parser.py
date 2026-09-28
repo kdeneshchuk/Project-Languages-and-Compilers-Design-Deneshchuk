@@ -6,11 +6,13 @@ from ast_nodes import *
 TRUE_TEXTS = ("yes", "\U0001F44D")
 EQ_TEXTS = ("equals", "\U0001F7F0")
 INT_MAX = 2147483647
+MAX_DEPTH = 100
 
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
+        self.depth = 0
 
     # ---------- primitives ----------
 
@@ -187,6 +189,9 @@ class Parser:
 
     def parse_when(self):                    # "when" expr ":" block ["otherwise" ":" block] "end" "."
         when = self.eat()
+        self.depth += 1
+        if self.depth > MAX_DEPTH:
+            self.error(f"'when' is nested deeper than {MAX_DEPTH} levels", at=when)
         cond = self.parse_expr()
         self.expect("colon", "':'")
         then_block = self.parse_block()
@@ -198,6 +203,7 @@ class Parser:
             else_block = self.parse_block()
         self.expect("kw", "'end'", "end")
         self.expect("dot", "'.'")
+        self.depth -= 1
         return WhenNode(when.line, when.col, cond, then_block, else_block)
 
     def parse_program(self):                 # program ::= { statement } tell_stmt
