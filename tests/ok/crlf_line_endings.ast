@@ -1,0 +1,5 @@
+Program
+  VarDecl x int const
+    Number 1
+  Tell
+    Var x

@@ -1,0 +1,9 @@
+Program
+  VarDecl x int const
+    BinOp +
+      Number 2
+      BinOp *
+        Number 3
+        Number 4
+  Tell
+    Var x

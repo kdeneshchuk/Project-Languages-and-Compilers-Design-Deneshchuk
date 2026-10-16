@@ -1,0 +1,2 @@
+always int B is A.
+tell B.

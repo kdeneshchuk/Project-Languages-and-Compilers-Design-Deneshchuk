@@ -1,0 +1,2 @@
+once int a was 1. once int b was 2.
+tell a.

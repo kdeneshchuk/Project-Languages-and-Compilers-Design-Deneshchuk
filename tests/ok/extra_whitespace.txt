@@ -1,0 +1,7 @@
+once   int	x   was
+
+
+   1  .
+
+
+tell   x  .

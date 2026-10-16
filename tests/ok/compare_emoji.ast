@@ -1,0 +1,13 @@
+Program
+  VarDecl a int const
+    Number 1
+  VarDecl p flag const
+    BinOp ==
+      Var a
+      Number 1
+  VarDecl q flag const
+    BinOp !=
+      Var a
+      Number 1
+  Tell
+    Var p

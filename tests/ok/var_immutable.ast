@@ -1,0 +1,5 @@
+Program
+  VarDecl age int const
+    Number 19
+  Tell
+    Var age

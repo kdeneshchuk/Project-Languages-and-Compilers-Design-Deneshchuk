@@ -1,0 +1,5 @@
+Program
+  VarDecl big long const
+    Number 9223372036854775807
+  Tell
+    Var big

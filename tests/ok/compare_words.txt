@@ -1,0 +1,4 @@
+once int a was 1.
+once flag p was a equals 1.
+once flag q was a differs 1.
+tell p.

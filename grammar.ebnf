@@ -1,0 +1,86 @@
+(* Telly: a language that reads like a story *)
+(* Course project, stage 1 *)
+
+(* ---------- program ---------- *)
+
+program     ::= { statement } tell_stmt
+
+statement   ::= const_decl | var_decl | assign | when_stmt
+
+(* ---------- statements ---------- *)
+
+const_decl  ::= "always" type ident "is" literal "."
+var_decl    ::= "once" [ "changing" ] type ident "was" expr "."
+assign      ::= ident "became" expr "."
+when_stmt   ::= "when" expr ":" block [ "otherwise" ":" block ] "end" "."
+tell_stmt   ::= "tell" factor "."
+
+block       ::= statement { statement }
+
+(* ---------- types ---------- *)
+
+type        ::= "int" | "long" | "flag"
+
+(* ---------- expressions ---------- *)
+
+expr        ::= arith [ compare_op arith ]
+arith       ::= term { ( "+" | "-" ) term }
+term        ::= factor { "*" factor }
+factor      ::= number | boolean | ident
+
+compare_op  ::= "equals" | "differs" | "🟰" | "🚫"
+
+literal     ::= number | boolean
+boolean     ::= "yes" | "no" | "👍" | "👎"
+
+ident       ::= ( letter | "_" ) { letter | digit | "_" }
+number      ::= digit { digit }
+letter      ::= "a" .. "z" | "A" .. "Z"
+digit       ::= "0" .. "9"
+
+(* "x" .. "y" means any single character from x to y. *)
+
+(* ident, number, letter and digit are lexical rules: the lexer recognises
+   them, so the parser has no function for them.                         *)
+
+(* ---------- terminals produced by the lexer ---------- *)
+
+(* ident  : letters, digits and '_', not starting with a digit,
+            and not a reserved word                                *)
+(* number : decimal digits only, no sign; a letter or '_' directly
+             after the digits is a lexical error (10x)              *)
+
+(* reserved words:
+     always  once  changing  is  was  became
+     when  otherwise  end  tell
+     int  long  flag
+     equals  differs  yes  no                                      *)
+
+(* emoji tokens (4 bytes each in UTF-8):
+     👍 F0 9F 91 8D    👎 F0 9F 91 8E
+     🟰 F0 9F 9F B0    🚫 F0 9F 9A AB                              *)
+
+(* other tokens: + - * : .                                         *)
+
+(* whitespace (space, tab, carriage return, newline) separates tokens
+   and is dropped; a statement may span several lines, the '.' ends it.
+   there are no comments.                                          *)
+
+(* ---------- context conditions (not expressible in EBNF) ---------- *)
+
+(* Overflow check, done in stage 1:
+   - a number larger than 9223372036854775807 is a lexical error,
+     it does not fit even in "long";
+   - a number standing alone on the right side of "is" or "was"
+     must fit the type written in the same declaration:
+       int  : 0 .. 2147483647
+       long : 0 .. 9223372036854775807
+   - there is no sign, so a literal is never negative.
+   - "when" blocks may be nested at most 100 levels deep.            *)
+
+(* Checked in stage 2, not by the grammar:
+   - the condition of "when" is a boolean expression;
+   - types of whole expressions (5 + 3000000000 stored in an "int");
+   - overflow of a value assigned with "became";
+   - a name is declared once and before its first use;
+   - only a "once changing" variable may be assigned.               *)

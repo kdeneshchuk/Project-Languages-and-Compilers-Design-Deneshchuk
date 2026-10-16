@@ -1,0 +1,11 @@
+always int LEGAL_AGE is 18.
+once int age was 19.
+once changing flag allowed was no.
+
+when age equals LEGAL_AGE:
+    allowed became yes.
+otherwise:
+    allowed became no.
+end.
+
+tell allowed.

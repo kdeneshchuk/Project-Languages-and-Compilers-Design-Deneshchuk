@@ -1,0 +1,3 @@
+when x equals 1:
+    tell x.
+end.

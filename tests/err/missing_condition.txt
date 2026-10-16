@@ -1,0 +1,4 @@
+when :
+    x became 1.
+end.
+tell x.

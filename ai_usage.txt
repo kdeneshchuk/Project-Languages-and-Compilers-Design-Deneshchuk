@@ -1,0 +1,262 @@
+AI USAGE - Project Stage 1 (Telly)
+Author: Khrystyna Deneshchuk
+
+======================================================================
+1. TOOLS AND FULL TRANSCRIPTS
+======================================================================
+1) Claude (Anthropic), one long project chat. Used for: language design,
+   grammar, the lexer, the AST classes, the parser, the CLI, the tests,
+   the test runner, the VS Code extension, the README, code audits.
+
+2) ChatGPT (OpenAI). Used twice as an independent reviewer:
+   a) a review of the implementation plan for Task 4;
+   b) a review of the finished code against the assignment text.
+
+No other AI tools were used.
+
+======================================================================
+2. HOW I WORKED
+======================================================================
+I did not ask for the whole project at once. I first discussed the language
+design, chose the features myself, and only then built the project in small
+pieces: grammar, AST classes, lexer, parser, CLI, tests, README. Each piece
+of code was pasted into my VM, run by me, and its real output was compared
+with what the AI predicted. Where they differed, I used the real output and
+asked what was wrong. I asked for explanations of every piece of code
+("explain this part in detail") before moving on.
+
+======================================================================
+3. MY PROMPTS AND WHAT THE AI ANSWERED (in order)
+======================================================================
+
+--- Language design ---
+
+P1. "окей ось тобі завдання, давай обговримо варіанти як цікаво ми можемо
+    зробити дизайн мови" + [the Project Stage 1 assignment text]
+    AI: noted that "constants, mutable and immutable variables" means three
+    kinds of names; listed design options (emoji, prefix expressions, marks
+    on names, block styles, literal suffixes) with their cost.
+
+P2. "а якщо не просто емодзі, бо таке будуть робити всі я думаю"
+    AI: proposed structural ideas (prefix notation, mutability in the
+    operator, gutter-style blocks, Cyrillic keywords).
+
+P3. "але це повинно бути не складно, бо я сама в своїй мові заплутаюсь, може
+    навпаки зробимо щось цікаве але інтуїтивно зрозуміле"
+    AI: proposed a language that reads like sentences ending with a full
+    stop (fixed/let/mut, be, becomes, if/then/done).
+
+P4. "це прикольна ідея і можливо ще б це можна було додати: емодзі лише для
+    yes / no (👍 / 👎)"
+    AI: explained how the lexer treats an emoji as a 4-byte sequence and
+    that the emoji should be synonyms of the words.
+
+P5. "давай англійські слова і хай будуть синоніми ... fixed - тільки літерал,
+    let - довільний вираз, так, але головне щоб не було якихось перетинів.
+    давай ще раз випиши всю ідею дизайну і перевір її за умовами завдання"
+    AI: wrote a full design, a draft grammar, an overlap table and a
+    requirement-by-requirement check.
+
+P6. "а давай ще для порівнянь такі емодзі додамо і теж з синонімами
+    (when age 🟰 19 / when age 🚫 20)"
+    AI: added 🟰 and 🚫 as synonyms; asked whether "when" replaces "if".
+
+P7. [my own sketch of the language with always / once / changing / was /
+    became / when / otherwise / end / tell]
+    AI: found that the word "is" was used twice (constant and comparison),
+    proposed equals/differs; asked about comments.
+
+P8. "давай без коментарів; 🟰 -> equals, 🚫 -> differs"
+    AI: fixed both decisions.
+
+P9. "yes / no залишимо; давай назву Telly"
+    AI: wrote the full grammar.ebnf.
+
+--- Grammar ---
+
+P10. "уважно перевір з цим [Task 2 text]"
+     AI: checked the grammar against each requirement; found that the
+     overflow check is not expressible in EBNF, so added a
+     "context conditions" block to the grammar.
+
+P11. "мій грамар файл на практичній виглядав так [Practice 3 grammar]"
+     AI: compared it with the Telly grammar.
+
+P12. "давай ще раз нашу мову тепер запишемо у грамар файл"
+     AI: gave the complete grammar.ebnf.
+
+P13-P15. "давай ще раз пройдемось по цьому файлу і проговоримо все",
+     "давай по кожному рядку пройдемось, щоб я знала що він точно означає",
+     "а що таке factor точка тут tell_stmt ::= ..."
+     AI: explained the EBNF notation and every rule line by line.
+
+--- VS Code and repository setup ---
+
+P16. [Task 3 text] "а що про це скажеш? нам треба додавати?"
+     AI: said it is optional and worth no points.
+
+P17. [screenshot of VS Code] "а я б додала, давай налаштуємо вс код"
+P18-P21. [terminal output: multipass IP, ssh keys, first login, VS Code
+     connected] 
+     AI: gave the Remote-SSH setup steps.
+
+P22. "але зараз ми налаштовуємо це [Task 3 text]"
+     AI: wrote the VS Code extension (package.json, highlighting grammar,
+     snippets, emoji completion) and an example program.
+P23. [screenshot with highlighting]  "але навіщо нам комітити приклад?"
+     AI: explained the trade-off for examples/.
+
+--- Plan for Task 4 ---
+
+P24. "окей я зробила коміт, давай тепер розберемо цей таск [Task 4 text]"
+     AI: split Task 4 into lexer, node hierarchy, parser, output format.
+P25. "а чи по завданню можна розділяти на різні файли?"
+     AI: the text does not forbid modules; suggested asking or starting
+     with one file.
+P26. [ChatGPT review of the plan, pasted] "що скажеш про ці правки?"
+     AI: agreed with the overflow correction (check only where the type
+     is written in the declaration), with separate parse_compare_op /
+     parse_boolean, and with modules; did not change the emoji design.
+P27. [grammar pasted] "тут все інше ок?"
+     AI: two small fixes to comments in the grammar.
+P28. "окей зробила коміт, тоді давай розпишемо план на 4 таск"
+     AI: gave the plan, token kinds, the --ast format and the schedule.
+P29. "ші юзедж ми потім в кінці весь залогуємо"
+     AI: reminded me to save the chat links.
+
+--- Lexer (step by step, each with an explanation) ---
+
+P30-P37. "давай поступово починати з кроку 1, з поясненнями чому і як",
+     [terminal outputs after each step], "давай розберемо детально цей
+     шматок", "так давай"
+     AI: wrote lexer.py in four parts (data tables, START/IDENT, NUMBER,
+     EMOJI) and explained each.
+
+--- AST classes ---
+
+P38-P41. [outputs] "давай розберемо детально цей шматок", "так давай далі"
+     AI: wrote ast_nodes.py in two parts (expressions; statements, When
+     with Then/Else, Program) and explained each.
+
+--- Parser ---
+
+P42-P49. "далі", [outputs], "давай тепер детально розбирати цей шматок",
+     [broken paste of a test script], [duplicate methods found by grep],
+     "чекай, ось код, що додати ще треба?", "поясни мені цей шматок
+     детально"
+     AI: wrote parser.py in three parts (expressions; declarations,
+     assignment, tell; blocks, when, program), explained each, helped me
+     remove a duplicated block of methods.
+
+--- CLI ---
+
+P50-P51. "давай тепер пройдемось детально по компайлеру" [outputs]
+     AI: wrote compiler.py (--ast, --tokens, exit codes) and explained it.
+P52. "до тестів трохи пізніше, давай впевнимось що на пустій вм все теж
+     правильно запуститься" ... "окей, все ж таки зробимо це у самому кінці"
+     AI: described the clean-clone and clean-VM check (postponed).
+
+--- Tests ---
+
+P53. [Task 5 text] "тепер треба з цим попрацювати добре"
+     AI: proposed the test list, wrote a generator script for the programs
+     and the run_tests.py runner.
+P54-P60. "а що це за скрипт у кроці 1? навіщо він", [outputs], "давай
+     розберемо цей файл"
+     AI: explained the generator and the runner; I read every .expected
+     file and the main .ast files by hand.
+P61-P65. "давай детально проаналізуємо ще код, можливо є дірки, які варто
+     покрити тестами"
+     AI: found that a very long number crashes the compiler with a Python
+     ValueError; proposed the fix and 41 more tests.
+P66-P69. "ось всі файли що в мене є, давай все дуже уважно перевіримо по
+     завданню" [files], "ось я зробила правки" [59 of 82 tests failing]
+     AI: audited the code against the task; found 3 style issues and 6
+     coverage gaps; explained why my refactor broke check_range.
+
+--- Second opinion and documentation ---
+
+P70. "ось я також відправила на перевірку такий самий промпт чату, ось
+     аналіз коду" [ChatGPT code review]
+     AI: separated real remarks from false alarms (the "*" instead of "_"
+     was a Markdown artifact; ai_usage.txt was already planned).
+P71. "а про що питати? ми ж робимо чисто за завданням"
+     AI: agreed that nothing needs to be asked; the stage-1 boundary is
+     documented in the README instead.
+P72-P75. [outputs of compare tests, git status, git log]
+     AI: helped commit in logical steps.
+P76. "давай тепер напишемо рідмі, ще раз детально проаналізуй код"
+     AI: wrote the README and re-checked that tell takes only one factor.
+P77. "залогуй мені весь наш чат у файл ai_usage.txt" (this file)
+
+======================================================================
+4. WHAT I TOOK AS IT WAS
+======================================================================
+- lexer.py: the four-state machine and its tables
+- ast_nodes.py: the node classes and dump()
+- parser.py: the recursive-descent functions
+- compiler.py: the command line
+- run_tests.py: the test runner
+- the first versions of the test programs (some were written by the AI in
+  a generator script)
+- the text of README.md and the VS Code extension files
+- the wording of the parser and lexer error messages
+
+======================================================================
+5. WHAT I DECIDED MYSELF
+======================================================================
+- the whole language concept: a story-like language, the words always /
+  once / changing, is / was / became, when / otherwise / end / tell,
+  a full stop ending each sentence
+- "simple enough that I do not get confused in it" (I rejected prefix
+  notation and gutter blocks)
+- emoji as synonyms for yes/no and for the comparisons
+- renaming the comparison words to equals/differs, after the AI noticed
+  that "is" was used twice
+- no comments in the language
+- the name Telly
+- yes / no kept as synonyms of the thumbs emoji
+- tell takes a single value
+- the modular file layout
+- building the optional VS Code extension
+- committing the example program
+
+======================================================================
+6. WHAT I CHANGED OR CORRECTED
+======================================================================
+- I did not trust the expected line:column values blindly: I compared every
+  .expected file with a table of expected positions and ran the code to
+  see the real output.
+- Long pasted scripts were damaged by the terminal twice; this produced a
+  duplicated block of methods in parser.py. I found it with grep -c and
+  grep -n and cut the duplicate.
+- The INT_MAX cleanup was misunderstood: I moved the constant out of the
+  class while check_range still used self.INT_MAX. The test runner
+  reported 59 of 82 tests failing; I fixed the reference.
+- A 5000-digit number crashed the compiler with a Python ValueError. I
+  reproduced the traceback first, then added the digit-length check.
+- I also asked for the same audit from ChatGPT (second tool) and compared
+  its remarks with the first one.
+
+======================================================================
+7. WHAT THE CHATGPT REVIEWS CHANGED
+======================================================================
+- The overflow check after "became" needs a symbol table, so stage 1
+  checks only a literal next to its declared type (grammar.ebnf updated).
+- parse_compare_op() and parse_boolean() became separate functions, to
+  match "one function per grammar rule".
+- A claim that grammar.ebnf had "*" instead of "_" was a formatting
+  artifact of the chat; I checked the file (grep) and it was correct.
+- A claim that ai_usage.txt was missing was right at that moment; this
+  file is the fix.
+
+======================================================================
+8. HOW I VERIFIED THE RESULT
+======================================================================
+- I read all 56 .expected files and the main .ast files by hand and
+  compared them with the rules of the language before committing.
+- I checked that the test runner really fails: I corrupted one .ast file
+  on purpose and confirmed that it reported the failure.
+- The runner finished with 94 of 94 tests passing before the final commit.
+- I tested a very deep nesting (3000 levels of "when") and a 5000-digit
+  number by hand; both give a one-line error.

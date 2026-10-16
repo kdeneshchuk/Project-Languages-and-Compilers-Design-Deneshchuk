@@ -1,0 +1,23 @@
+Program
+  VarDecl x int mut
+    Number 5
+  When
+    BinOp ==
+      Var x
+      Number 5
+    Then
+      When
+        BinOp !=
+          Var x
+          Number 6
+        Then
+          Assign x
+            Number 1
+        Else
+          Assign x
+            Number 2
+    Else
+      Assign x
+        Number 3
+  Tell
+    Var x

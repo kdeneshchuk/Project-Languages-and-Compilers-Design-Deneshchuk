@@ -1,0 +1,9 @@
+Program
+  VarDecl score int mut
+    Number 0
+  Assign score
+    BinOp +
+      Var score
+      Number 1
+  Tell
+    Var score

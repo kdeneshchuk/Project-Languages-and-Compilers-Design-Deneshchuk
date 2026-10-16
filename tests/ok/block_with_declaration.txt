@@ -1,0 +1,6 @@
+once changing int x was 1.
+when x equals 1:
+    once int inner was 5.
+    x became inner.
+end.
+tell x.

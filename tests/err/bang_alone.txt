@@ -1,0 +1,2 @@
+once flag f was a != b.
+tell f.

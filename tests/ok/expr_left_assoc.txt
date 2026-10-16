@@ -1,0 +1,2 @@
+once int a was 10 - 3 - 2.
+tell a.

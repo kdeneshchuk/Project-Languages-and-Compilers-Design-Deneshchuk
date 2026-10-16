@@ -1,0 +1,11 @@
+Program
+  VarDecl r flag const
+    BinOp ==
+      BinOp +
+        Var x
+        Number 1
+      BinOp *
+        Var y
+        Number 2
+  Tell
+    Var r

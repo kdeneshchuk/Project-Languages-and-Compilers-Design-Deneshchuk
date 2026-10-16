@@ -1,0 +1,14 @@
+Program
+  VarDecl x int mut
+    Number 1
+  When
+    BinOp ==
+      Var x
+      Number 1
+    Then
+      VarDecl inner int const
+        Number 5
+      Assign x
+        Var inner
+  Tell
+    Var x

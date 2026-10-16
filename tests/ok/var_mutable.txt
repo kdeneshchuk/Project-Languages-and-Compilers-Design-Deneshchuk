@@ -1,0 +1,3 @@
+once changing int score was 0.
+score became score + 1.
+tell score.

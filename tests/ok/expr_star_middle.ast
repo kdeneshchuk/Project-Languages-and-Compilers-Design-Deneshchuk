@@ -1,0 +1,11 @@
+Program
+  VarDecl y int const
+    BinOp +
+      BinOp +
+        Number 1
+        BinOp *
+          Number 2
+          Number 3
+      Number 4
+  Tell
+    Var y

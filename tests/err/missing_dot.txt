@@ -1,0 +1,2 @@
+once int x was 5
+tell x.

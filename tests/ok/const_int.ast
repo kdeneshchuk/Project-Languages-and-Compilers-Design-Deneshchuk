@@ -1,0 +1,5 @@
+Program
+  ConstDecl LIMIT int
+    Number 100
+  Tell
+    Var LIMIT

@@ -1,0 +1,7 @@
+Program
+  VarDecl x long const
+    Number 2147483648
+  ConstDecl Y long
+    Number 9223372036854775807
+  Tell
+    Var x

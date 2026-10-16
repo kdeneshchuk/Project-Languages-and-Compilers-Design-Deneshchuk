@@ -1,0 +1,18 @@
+Program
+  Assign x
+    BinOp +
+      Var y
+      Number 1
+  VarDecl f flag const
+    Number 5
+  VarDecl n int const
+    Bool true
+  ConstDecl c flag
+    Number 7
+  When
+    Number 5
+    Then
+      Assign n
+        Number 1
+  Tell
+    Var z

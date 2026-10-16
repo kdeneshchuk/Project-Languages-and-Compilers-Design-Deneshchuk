@@ -1,0 +1,2 @@
+always flag READY is 👍.
+tell READY.

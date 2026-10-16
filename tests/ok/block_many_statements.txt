@@ -1,0 +1,8 @@
+once changing int x was 1.
+once changing int y was 2.
+when x equals 1:
+    x became 2.
+    y became 3.
+    x became x + y.
+end.
+tell x.

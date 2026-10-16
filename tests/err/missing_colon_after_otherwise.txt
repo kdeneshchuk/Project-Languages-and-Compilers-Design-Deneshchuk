@@ -1,0 +1,6 @@
+when x equals 1:
+    x became 2.
+otherwise
+    x became 3.
+end.
+tell x.

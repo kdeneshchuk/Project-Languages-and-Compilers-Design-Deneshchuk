@@ -1,0 +1,22 @@
+{
+  "when / otherwise": {
+    "prefix": "when",
+    "body": [
+      "when ${1:condition}:",
+      "    $2",
+      "otherwise:",
+      "    $3",
+      "end."
+    ],
+    "description": "when ... otherwise ... end."
+  },
+  "when": {
+    "prefix": "whenonly",
+    "body": [
+      "when ${1:condition}:",
+      "    $2",
+      "end."
+    ],
+    "description": "when ... end. (without otherwise)"
+  }
+}

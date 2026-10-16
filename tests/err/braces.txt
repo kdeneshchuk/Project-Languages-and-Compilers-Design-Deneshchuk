@@ -1,0 +1,2 @@
+when x equals 1 { x became 2. }
+tell x.

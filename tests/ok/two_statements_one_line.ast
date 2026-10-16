@@ -1,0 +1,7 @@
+Program
+  VarDecl a int const
+    Number 1
+  VarDecl b int const
+    Number 2
+  Tell
+    Var a

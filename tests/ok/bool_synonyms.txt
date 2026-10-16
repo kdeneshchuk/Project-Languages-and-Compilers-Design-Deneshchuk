@@ -1,0 +1,5 @@
+always flag A is yes.
+always flag B is no.
+always flag C is 👍.
+always flag D is 👎.
+tell A.

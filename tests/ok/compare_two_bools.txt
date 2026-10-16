@@ -1,0 +1,3 @@
+once flag a was yes equals no.
+once flag b was 👍 🚫 👎.
+tell a.

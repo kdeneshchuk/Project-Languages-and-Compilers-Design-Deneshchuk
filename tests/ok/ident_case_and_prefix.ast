@@ -1,0 +1,13 @@
+Program
+  VarDecl endless int const
+    Number 1
+  VarDecl tellme int const
+    Number 2
+  VarDecl isx int const
+    Number 3
+  VarDecl Tell int const
+    Number 4
+  VarDecl YES int const
+    Number 5
+  Tell
+    Var endless
