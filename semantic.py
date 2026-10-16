@@ -25,7 +25,10 @@ class SemanticChecker:
         self.visit(tree)
 
     def visit(self, node):
-        return getattr(self, "visit_" + type(node).__name__)(node)
+        method = getattr(self, "visit_" + type(node).__name__, None)
+        if method is None:
+            self.fail(node, "this construct is not supported yet")
+        return method(node)
 
     def fail(self, at, msg):
         raise CompileError(f"line {at.line}:{at.col}: {msg}")
@@ -54,6 +57,8 @@ class SemanticChecker:
     # ---------- program and blocks ----------
 
     def visit_ProgramNode(self, node):
+        for item in node.structs + node.tasks:
+            self.visit(item)
         for stmt in node.statements:
             self.visit(stmt)
         self.visit(node.tell)
