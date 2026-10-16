@@ -12,10 +12,15 @@ class ASTNode:
     def children(self):
         return []
 
-    def dump(self, indent=0):
-        print("  " * indent + self.label())
+    def dump_lines(self, indent=0, out=None):
+        out = out if out is not None else []
+        out.append("  " * indent + self.label())
         for child in self.children():
-            child.dump(indent + 1)
+            child.dump_lines(indent + 1, out)
+        return out
+
+    def dump(self, indent=0):
+        print("\n".join(self.dump_lines(indent)))
 
 
 class ExprNode(ASTNode):

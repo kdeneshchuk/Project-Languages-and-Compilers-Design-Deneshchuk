@@ -28,6 +28,7 @@ def main_cli():
         print(f"cannot read {args[0]}: {e.strerror}", file=sys.stderr)
         sys.exit(2)
 
+    output = None
     try:
         tokens = lex(data)
         if mode == "--tokens":
@@ -35,6 +36,8 @@ def main_cli():
                 print(f"{tok.line}:{tok.col} {tok.kind} {tok.text!r}")
             return
         tree = Parser(tokens).parse_program()
+        if mode == "--ast":
+            output = "\n".join(tree.dump_lines())
     except CompileError as e:
         print(f"compilation error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -42,8 +45,8 @@ def main_cli():
         print("compilation error: nesting is too deep", file=sys.stderr)
         sys.exit(1)
 
-    if mode == "--ast":
-        tree.dump()
+    if output is not None:
+        print(output)
 
 
 if __name__ == "__main__":

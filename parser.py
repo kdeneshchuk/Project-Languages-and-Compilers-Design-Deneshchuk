@@ -7,6 +7,7 @@ TRUE_TEXTS = ("yes", "\U0001F44D")
 EQ_TEXTS = ("equals", "\U0001F7F0")
 INT_MAX = 2147483647
 MAX_DEPTH = 100
+MAX_EXPR_DEPTH = 100
 
 class Parser:
     def __init__(self, tokens):
@@ -15,6 +16,7 @@ class Parser:
         self.depth = 0
         self.in_task = False
         self.struct_names = set()
+        self.expr_depth = 0
 
     # ---------- primitives ----------
 
@@ -148,11 +150,15 @@ class Parser:
         return node
 
     def parse_expr(self):                    # expr ::= arith [ compare_op arith ]
+        self.expr_depth += 1
+        if self.expr_depth > MAX_EXPR_DEPTH:
+            self.error(f"expression is nested deeper than {MAX_EXPR_DEPTH} levels")
         node = self.parse_arith()
         tok = self.peek()
         if tok is not None and tok.kind == "cmp":
             op_tok, op = self.parse_compare_op()
             node = BinOpNode(op_tok.line, op_tok.col, op, node, self.parse_arith())
+        self.expr_depth -= 1
         return node
 
     # ---------- types and literals ----------
