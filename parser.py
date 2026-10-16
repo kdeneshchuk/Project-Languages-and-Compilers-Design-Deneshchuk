@@ -14,6 +14,7 @@ class Parser:
         self.pos = 0
         self.depth = 0
         self.in_task = False
+        self.struct_names = set()
 
     # ---------- primitives ----------
 
@@ -45,6 +46,12 @@ class Parser:
         if tok.kind != kind or (text is not None and tok.text != text):
             self.error(f"expected {what}, got '{tok.text}'")
         return self.eat()
+
+    def expect_name(self, what):
+        tok = self.peek()
+        if tok is not None and tok.kind == "kw" and tok.text in ("read", "print"):
+            self.error(f"'{tok.text}' is a built-in name and cannot be used as {what}")
+        return self.expect("ident", what)
 
     # ---------- expressions ----------
 
@@ -150,9 +157,16 @@ class Parser:
 
     # ---------- types and literals ----------
 
-    def parse_type(self):                    # type ::= "int" | "long" | "flag"
+    def parse_builtin_type(self):            # builtin_type ::= "int" | "long" | "flag"
         tok = self.expect("type", "a type (int, long or flag)")
         return tok.text
+
+    def parse_type(self):                    # type ::= builtin_type | ident (a struct)
+        tok = self.peek()
+        if tok is not None and tok.kind == "ident" and tok.text in self.struct_names:
+            self.eat()
+            return tok.text
+        return self.parse_builtin_type()
 
     def parse_literal(self):                 # literal ::= number | boolean
         tok = self.peek()
@@ -178,8 +192,8 @@ class Parser:
 
     def parse_const_decl(self):              # "always" type ident "is" literal "."
         self.eat()                           # "always", the caller looked at it
-        type_name = self.parse_type()
-        name = self.expect("ident", "a variable name")
+        type_name = self.parse_builtin_type()
+        name = self.expect_name("a variable name")
         self.expect("kw", "'is'", "is")
         value = self.parse_literal()
         self.check_range(type_name, value)
@@ -193,7 +207,7 @@ class Parser:
         if mutable:
             self.eat()
         type_name = self.parse_type()
-        name = self.expect("ident", "a variable name")
+        name = self.expect_name("a variable name")
         self.expect("kw", "'was'", "was")
         init = self.parse_expr()
         self.check_range(type_name, init)
@@ -228,6 +242,71 @@ class Parser:
         self.expect("dot", "'.'")
         return GiveNode(give.line, give.col, value)
 
+    def parse_param(self):                   # param ::= type ident
+        type_name = self.parse_type()
+        name = self.expect_name("a parameter name")
+        return ParamNode(name.line, name.col, name.text, type_name)
+
+    def parse_task(self, is_member=False):   # "task" ident "(" ... ")" "giving" type ":" block "end" "."
+        self.eat()                           # "task"
+        name = self.expect_name("a task name")
+        self.expect("lparen", "'('")
+        params = []
+        tok = self.peek()
+        if not (tok is not None and tok.kind == "rparen"):
+            params.append(self.parse_param())
+            while (tok := self.peek()) is not None and tok.kind == "comma":
+                self.eat()
+                params.append(self.parse_param())
+        self.expect("rparen", "')'")
+        self.expect("kw", "'giving'", "giving")
+        result_type = self.parse_type()
+        self.expect("colon", "':'")
+        saved = self.in_task
+        self.in_task = True
+        body = self.parse_block()
+        self.in_task = saved
+        if not isinstance(body.statements[-1], GiveNode):
+            self.error("the body of a task must end with 'give'")
+        self.expect("kw", "'end'", "end")
+        self.expect("dot", "'.'")
+        return TaskNode(name.line, name.col, name.text, params, result_type, body, is_member)
+
+    def parse_field_decl(self):              # "once" ["changing"] type ident "."
+        self.eat()                           # "once"
+        tok = self.peek()
+        mutable = tok is not None and tok.kind == "kw" and tok.text == "changing"
+        if mutable:
+            self.eat()
+        type_name = self.parse_type()
+        name = self.expect_name("a field name")
+        self.expect("dot", "'.'")
+        return FieldDeclNode(name.line, name.col, name.text, type_name, mutable)
+
+    def parse_struct(self):                  # "struct" ident ":" field { field } { task } "end" "."
+        self.eat()                           # "struct"
+        name = self.expect_name("a struct name")
+        self.struct_names.add(name.text)
+        self.expect("colon", "':'")
+        fields, tasks = [], []
+        while True:
+            tok = self.peek()
+            if tok is not None and tok.kind == "kw" and tok.text == "once":
+                if tasks:
+                    self.error("a field cannot come after a member function")
+                fields.append(self.parse_field_decl())
+            elif tok is not None and tok.kind == "kw" and tok.text == "task":
+                if not fields:
+                    self.error("a member function cannot come before the first field")
+                tasks.append(self.parse_task(is_member=True))
+            else:
+                break
+        if not fields:
+            self.error("a struct needs at least one field")
+        self.expect("kw", "'end'", "end")
+        self.expect("dot", "'.'")
+        return StructNode(name.line, name.col, name.text, fields, tasks)
+
     def parse_tell(self):                    # "tell" factor "."
         tell = self.eat()
         value = self.parse_factor()
@@ -243,6 +322,10 @@ class Parser:
         if tok.kind == "ident":
             return True
         return tok.kind == "kw" and tok.text in ("always", "once", "when", "print", "give")
+
+    def starts_with(self, word):
+        tok = self.peek()
+        return tok is not None and tok.kind == "kw" and tok.text == word
 
     def parse_statement(self):               # const_decl | var_decl | assign | when_stmt
         tok = self.peek()
@@ -296,17 +379,25 @@ class Parser:
         self.depth -= 1
         return WhenNode(when.line, when.col, cond, then_block, else_block)
 
-    def parse_program(self):                 # program ::= { statement } tell_stmt
-        statements = []
+    def parse_program(self):                 # program ::= { struct } { task } { statement } tell_stmt
+        structs, tasks, statements = [], [], []
+        while self.starts_with("struct"):
+            structs.append(self.parse_struct())
+        while self.starts_with("task"):
+            tasks.append(self.parse_task())
         while self.starts_statement(self.peek()):
             statements.append(self.parse_statement())
         tok = self.peek()
         if tok is None:
             self.error("expected 'tell' at the end of the program, found end of file")
+        if tok.kind == "kw" and tok.text == "struct":
+            self.error("a struct must be declared before the tasks and the statements")
+        if tok.kind == "kw" and tok.text == "task":
+            self.error("a task must be declared before the statements")
         if not (tok.kind == "kw" and tok.text == "tell"):
             self.error(f"cannot start a statement with '{tok.text}'")
         tell = self.parse_tell()
         extra = self.peek()
         if extra is not None:
             self.error(f"unexpected '{extra.text}' after 'tell'")
-        return ProgramNode(1, 1, statements, tell)
+        return ProgramNode(1, 1, statements, tell, structs, tasks)
