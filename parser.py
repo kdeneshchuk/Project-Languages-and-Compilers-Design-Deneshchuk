@@ -145,7 +145,7 @@ class Parser:
         self.expect("kw", "'became'", "became")
         value = self.parse_expr()
         self.expect("dot", "'.'")
-        return AssignNode(name.line, name.col, name.text, value)
+        return AssignNode(name.line, name.col, [name.text], value)
 
     def parse_tell(self):                    # "tell" factor "."
         tell = self.eat()
