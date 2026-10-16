@@ -66,9 +66,10 @@ class VarNode(ExprNode):
 
 class FieldNode(ExprNode):
     """A chain of two or more names: x of center of c."""
-    def __init__(self, line, col, names):
+    def __init__(self, line, col, names, positions=None):
         super().__init__(line, col)
         self.names = names          # source order: the variable is the last
+        self.positions = positions or [(line, col)] * len(names)
 
     def label(self):
         return "Field " + " of ".join(self.names)
@@ -121,11 +122,12 @@ class CallNode(ExprNode):
 
 class MemberCallNode(ExprNode):
     """A call of a member function on an object: shift(2) of center of c."""
-    def __init__(self, line, col, name, args, obj):
+    def __init__(self, line, col, name, args, obj, obj_positions=None):
         super().__init__(line, col)
         self.name = name
         self.args = args
         self.obj = obj              # names of the object chain, source order
+        self.obj_positions = obj_positions or [(line, col)] * len(obj)
 
     def label(self):
         return f"MemberCall {self.name} of " + " of ".join(self.obj)
@@ -168,10 +170,11 @@ class VarDeclNode(StmtNode):
 
 
 class AssignNode(StmtNode):
-    def __init__(self, line, col, names, value):
+    def __init__(self, line, col, names, value, positions=None):
         super().__init__(line, col)
         self.names = names          # ["x"] or ["x", "center", "c"]
         self.value = value
+        self.positions = positions or [(line, col)] * len(names)
 
     def label(self):
         return "Assign " + " of ".join(self.names)

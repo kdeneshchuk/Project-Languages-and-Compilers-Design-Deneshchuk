@@ -68,16 +68,19 @@ class Parser:
     def parse_names(self):                   # ident { "of" ident }
         first = self.expect("ident", "a name")
         names = [first.text]
+        positions = [(first.line, first.col)]
         while (tok := self.peek()) is not None and tok.kind == "kw" and tok.text == "of":
             self.eat()
-            names.append(self.expect("ident", "a name after 'of'").text)
-        return first, names
+            nxt = self.expect("ident", "a name after 'of'")
+            names.append(nxt.text)
+            positions.append((nxt.line, nxt.col))
+        return first, names, positions
 
     def parse_access(self):                  # access ::= ident { "of" ident }
-        first, names = self.parse_names()
+        first, names, positions = self.parse_names()
         if len(names) == 1:
             return VarNode(first.line, first.col, first.text)
-        return FieldNode(first.line, first.col, names)
+        return FieldNode(first.line, first.col, names, positions)
 
     def parse_args(self, allow_empty=True):  # "(" [ expr { "," expr } ] ")"
         self.expect("lparen", "'('")
@@ -97,8 +100,8 @@ class Parser:
         tok = self.peek()
         if tok is not None and tok.kind == "kw" and tok.text == "of":
             self.eat()
-            _, obj = self.parse_names()
-            return MemberCallNode(name.line, name.col, name.text, args, obj)
+            _, obj, obj_positions = self.parse_names()
+            return MemberCallNode(name.line, name.col, name.text, args, obj, obj_positions)
         return CallNode(name.line, name.col, name.text, args)
 
     def parse_make(self):                    # "make" ident "(" expr { "," expr } ")"
@@ -221,11 +224,11 @@ class Parser:
         return VarDeclNode(name.line, name.col, name.text, type_name, mutable, init)
 
     def parse_assign(self):                  # access "became" expr "."
-        first, names = self.parse_names()
+        first, names, positions = self.parse_names()
         self.expect("kw", "'became'", "became")
         value = self.parse_expr()
         self.expect("dot", "'.'")
-        return AssignNode(first.line, first.col, names, value)
+        return AssignNode(first.line, first.col, names, value, positions)
 
     def parse_print(self):                   # "print" "(" ( string | expr ) ")" "."
         print_tok = self.eat()
