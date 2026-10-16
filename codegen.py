@@ -4,6 +4,7 @@ from llvmlite import ir
 import llvmlite.binding as llvm
 
 from lexer import CompileError
+from ast_nodes import ConstDeclNode
 
 I1, I8, I32, I64 = ir.IntType(1), ir.IntType(8), ir.IntType(32), ir.IntType(64)
 LLVM_TYPES = {"int": I32, "long": I64, "flag": I1}
@@ -14,6 +15,8 @@ class CodeGen:
         self.module = ir.Module(name="telly")
         self.module.triple = llvm.get_default_triple()
         self.strings = {}               # text -> global constant
+        self.functions = {}             # task name -> the function of the module
+        self.current_task = None        # the task whose body is being generated
         self.n_slots = 0                # allocas already at the start of the entry block
         self.printf = ir.Function(
             self.module,
@@ -67,14 +70,42 @@ class CodeGen:
     def printf_call(self, fmt, *args):
         self.builder.call(self.printf, [self.str_ptr(fmt)] + list(args))
 
-    # ---------- program and blocks ----------
+    def define_constant(self, node):
+        node.symbol.const = ir.Constant(LLVM_TYPES[node.type_name], int(node.value.value))
+
+    # ---------- program, tasks and blocks ----------
 
     def visit_ProgramNode(self, node):
-        for item in node.structs + node.tasks:
-            self.visit(item)             # no method for it yet: a clear error, not silence
+        for struct in node.structs:
+            self.visit(struct)          # no method yet: a clear error, not silence
+        for stmt in node.statements:
+            if isinstance(stmt, ConstDeclNode):
+                self.define_constant(stmt)      # a task below may use a constant
+        self.declare_tasks(node.tasks)          # every function exists before any body
+        for task in node.tasks:
+            self.visit(task)
         for stmt in node.statements:
             self.visit(stmt)
         self.visit(node.tell)
+
+    def declare_tasks(self, tasks):
+        for task in tasks:
+            fnty = ir.FunctionType(LLVM_TYPES[task.result_type],
+                                   [LLVM_TYPES[p.type_name] for p in task.params])
+            self.functions[task.name] = ir.Function(self.module, fnty, name=f"fn.{task.name}")
+
+    def visit_TaskNode(self, node):
+        saved = (self.builder, self.function, self.n_slots, self.current_task)
+        self.function = self.functions[node.name]
+        self.current_task = node
+        self.n_slots = 0
+        self.builder = ir.IRBuilder(self.function.append_basic_block("entry"))
+        for arg, p in zip(self.function.args, node.params):
+            arg.name = p.name
+            p.symbol.ptr = self.new_slot(LLVM_TYPES[p.type_name], p.name)
+            self.builder.store(arg, p.symbol.ptr)
+        self.visit(node.body)
+        self.builder, self.function, self.n_slots, self.current_task = saved
 
     def visit_BlockNode(self, node):
         for stmt in node.statements:
@@ -83,7 +114,7 @@ class CodeGen:
     # ---------- statements ----------
 
     def visit_ConstDeclNode(self, node):
-        node.symbol.const = ir.Constant(LLVM_TYPES[node.type_name], int(node.value.value))
+        self.define_constant(node)
 
     def visit_VarDeclNode(self, node):
         value = self.coerce(self.visit(node.init), node.init.type, node.type_name)
@@ -117,6 +148,11 @@ class CodeGen:
 
         self.builder.position_at_end(merge_bb)
 
+    def visit_GiveNode(self, node):
+        value = self.visit(node.value)
+        value = self.coerce(value, node.value.type, self.current_task.result_type)
+        self.builder.ret(value)
+
     def visit_TellNode(self, node):
         value = self.visit(node.value)
         t = node.value.type
@@ -141,6 +177,11 @@ class CodeGen:
         if symbol.kind == "const":
             return symbol.const
         return self.builder.load(symbol.ptr)
+
+    def visit_CallNode(self, node):
+        args = [self.coerce(self.visit(a), a.type, p.type_name)
+                for a, p in zip(node.args, node.task.params)]
+        return self.builder.call(self.functions[node.name], args)
 
     def visit_BinOpNode(self, node):
         left = self.coerce(self.visit(node.left), node.left.type, node.operand_type)

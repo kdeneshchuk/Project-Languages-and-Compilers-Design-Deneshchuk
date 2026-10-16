@@ -6,6 +6,11 @@ from ast_nodes import *
 INT_MAX = 2147483647
 
 
+def fits(have, want):
+    """May a value of type `have` go where `want` is expected? The same type, or int into long."""
+    return have == want or (have == "int" and want == "long")
+
+
 class Symbol:
     """What the checker knows about one name."""
     def __init__(self, name, type_name, mutable, kind):
@@ -20,6 +25,10 @@ class Symbol:
 class SemanticChecker:
     def __init__(self):
         self.scopes = [{}]              # a stack of frames; the bottom one is the top level
+        self.tasks = {}                 # task name -> TaskNode: the signatures
+        self.global_consts = {}         # top-level "always" constants, seen by every task
+        self.top_level_vars = set()     # names of top-level "once" variables (for a clear error)
+        self.current_task = None        # the task whose body is being checked
 
     def check(self, tree):
         self.visit(tree)
@@ -39,7 +48,14 @@ class SemanticChecker:
         for frame in reversed(self.scopes):
             if name in frame:
                 return frame[name]
+        if self.current_task is not None:       # inside a task: then the global constants
+            return self.global_consts.get(name)
         return None
+
+    def unknown(self, node, name):
+        if self.current_task is not None and name in self.top_level_vars:
+            self.fail(node, f"variable '{name}' of the top level is not visible inside a task")
+        self.fail(node, f"variable '{name}' is used before its declaration")
 
     def declare(self, node, symbol):
         if symbol.name in self.scopes[-1]:
@@ -48,20 +64,60 @@ class SemanticChecker:
 
     def check_assignable(self, expr, want, at, what):
         have = expr.type
-        if have == want or (have == "int" and want == "long"):
+        if fits(have, want):
             return
         if isinstance(expr, NumberNode) and want in ("int", "long"):
             self.fail(expr, f"number {expr.value} does not fit in {want}")
         self.fail(at, f"cannot {what} of type {want} with a value of type {have}")
 
-    # ---------- program and blocks ----------
+    # ---------- collecting: before any body is checked ----------
+
+    def collect_top_level(self, statements):
+        for stmt in statements:
+            if isinstance(stmt, VarDeclNode):
+                self.top_level_vars.add(stmt.name)
+            elif isinstance(stmt, ConstDeclNode):
+                self.visit(stmt.value)
+                self.check_assignable(stmt.value, stmt.type_name, stmt, f"initialise '{stmt.name}'")
+                if stmt.name in self.global_consts:
+                    self.fail(stmt, f"'{stmt.name}' is already declared in this scope")
+                stmt.symbol = Symbol(stmt.name, stmt.type_name, False, "const")
+                self.global_consts[stmt.name] = stmt.symbol
+
+    def collect_tasks(self, tasks):
+        for task in tasks:
+            if task.name in self.tasks:
+                self.fail(task, f"task '{task.name}' is already declared")
+            seen = set()
+            for p in task.params:
+                if p.name in seen:
+                    self.fail(p, f"parameter '{p.name}' is already declared in task '{task.name}'")
+                seen.add(p.name)
+            self.tasks[task.name] = task
+
+    # ---------- program, tasks and blocks ----------
 
     def visit_ProgramNode(self, node):
-        for item in node.structs + node.tasks:
-            self.visit(item)
+        for struct in node.structs:
+            self.visit(struct)          # no method yet: "not supported yet"
+        self.collect_top_level(node.statements)
+        self.collect_tasks(node.tasks)
+        for task in node.tasks:
+            self.visit(task)
         for stmt in node.statements:
             self.visit(stmt)
         self.visit(node.tell)
+
+    def visit_TaskNode(self, node):
+        saved = (self.scopes, self.current_task)
+        frame = {}
+        for p in node.params:
+            p.symbol = Symbol(p.name, p.type_name, False, "var")
+            frame[p.name] = p.symbol
+        self.scopes = [frame]           # the bottom frame holds only the parameters
+        self.current_task = node
+        self.visit(node.body)           # the body pushes its own frame on top
+        self.scopes, self.current_task = saved
 
     def visit_BlockNode(self, node):
         self.scopes.append({})
@@ -72,9 +128,10 @@ class SemanticChecker:
     # ---------- statements ----------
 
     def visit_ConstDeclNode(self, node):
-        self.visit(node.value)
-        self.check_assignable(node.value, node.type_name, node, f"initialise '{node.name}'")
-        node.symbol = Symbol(node.name, node.type_name, False, "const")
+        if not hasattr(node, "symbol"):             # a top-level one was made when collecting
+            self.visit(node.value)
+            self.check_assignable(node.value, node.type_name, node, f"initialise '{node.name}'")
+            node.symbol = Symbol(node.name, node.type_name, False, "const")
         self.declare(node, node.symbol)
 
     def visit_VarDeclNode(self, node):
@@ -84,10 +141,12 @@ class SemanticChecker:
         self.declare(node, node.symbol)
 
     def visit_AssignNode(self, node):
+        if len(node.names) > 1:
+            self.fail(node, "this construct is not supported yet")
         name = node.names[0]
         symbol = self.lookup(name)
         if symbol is None:
-            self.fail(node, f"variable '{name}' is used before its declaration")
+            self.unknown(node, name)
         if not symbol.mutable:
             self.fail(node, f"cannot assign to '{name}': it is not 'once changing'")
         self.visit(node.value)
@@ -101,6 +160,15 @@ class SemanticChecker:
         self.visit(node.then_block)
         if node.else_block is not None:
             self.visit(node.else_block)
+
+    def visit_GiveNode(self, node):
+        task = self.current_task
+        value_type = self.visit(node.value)
+        if not fits(value_type, task.result_type):
+            if isinstance(node.value, NumberNode) and task.result_type in ("int", "long"):
+                self.fail(node.value, f"number {node.value.value} does not fit in {task.result_type}")
+            self.fail(node, f"task '{task.name}' gives {task.result_type}, "
+                            f"but this value has type {value_type}")
 
     def visit_TellNode(self, node):
         self.visit(node.value)
@@ -118,9 +186,23 @@ class SemanticChecker:
     def visit_VarNode(self, node):
         symbol = self.lookup(node.name)
         if symbol is None:
-            self.fail(node, f"variable '{node.name}' is used before its declaration")
+            self.unknown(node, node.name)
         node.symbol = symbol
         node.type = symbol.type_name
+        return node.type
+
+    def visit_CallNode(self, node):
+        task = self.tasks.get(node.name)
+        if task is None:
+            self.fail(node, f"task '{node.name}' is not declared")
+        if len(node.args) != len(task.params):
+            self.fail(node, f"task '{node.name}' takes {len(task.params)} "
+                            f"argument(s), got {len(node.args)}")
+        for i, (arg, param) in enumerate(zip(node.args, task.params), 1):
+            self.visit(arg)
+            self.check_assignable(arg, param.type_name, arg, f"pass argument {i} of '{node.name}'")
+        node.task = task
+        node.type = task.result_type
         return node.type
 
     def visit_BinOpNode(self, node):
