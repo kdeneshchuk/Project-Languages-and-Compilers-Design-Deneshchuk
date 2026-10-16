@@ -13,6 +13,7 @@ class Parser:
         self.tokens = tokens
         self.pos = 0
         self.depth = 0
+        self.in_task = False
 
     # ---------- primitives ----------
 
@@ -199,12 +200,33 @@ class Parser:
         self.expect("dot", "'.'")
         return VarDeclNode(name.line, name.col, name.text, type_name, mutable, init)
 
-    def parse_assign(self):                  # ident "became" expr "."
-        name = self.eat()                    # the identifier
+    def parse_assign(self):                  # access "became" expr "."
+        first, names = self.parse_names()
         self.expect("kw", "'became'", "became")
         value = self.parse_expr()
         self.expect("dot", "'.'")
-        return AssignNode(name.line, name.col, [name.text], value)
+        return AssignNode(first.line, first.col, names, value)
+
+    def parse_print(self):                   # "print" "(" ( string | expr ) ")" "."
+        print_tok = self.eat()
+        self.expect("lparen", "'(' after 'print'")
+        tok = self.peek()
+        if tok is not None and tok.kind == "string":
+            self.eat()
+            value = StringNode(tok.line, tok.col, tok.text)
+        else:
+            value = self.parse_expr()
+        self.expect("rparen", "')'")
+        self.expect("dot", "'.'")
+        return PrintNode(print_tok.line, print_tok.col, value)
+
+    def parse_give(self):                    # "give" factor "."
+        give = self.eat()
+        if not self.in_task:
+            self.error("'give' can only stand inside a task", at=give)
+        value = self.parse_factor()
+        self.expect("dot", "'.'")
+        return GiveNode(give.line, give.col, value)
 
     def parse_tell(self):                    # "tell" factor "."
         tell = self.eat()
@@ -220,7 +242,7 @@ class Parser:
             return False
         if tok.kind == "ident":
             return True
-        return tok.kind == "kw" and tok.text in ("always", "once", "when")
+        return tok.kind == "kw" and tok.text in ("always", "once", "when", "print", "give")
 
     def parse_statement(self):               # const_decl | var_decl | assign | when_stmt
         tok = self.peek()
@@ -230,7 +252,14 @@ class Parser:
             return self.parse_var_decl()
         if tok.kind == "kw" and tok.text == "when":
             return self.parse_when()
+        if tok.kind == "kw" and tok.text == "print":
+            return self.parse_print()
+        if tok.kind == "kw" and tok.text == "give":
+            return self.parse_give()
         if tok.kind == "ident":
+            nxt = self.peek_next()
+            if nxt is not None and nxt.kind == "lparen":
+                self.error("a call alone is not a statement", at=tok)
             return self.parse_assign()
         self.error(f"cannot start a statement with '{tok.text}'")
 
@@ -243,6 +272,8 @@ class Parser:
         line, col = first.line, first.col
         statements = [self.parse_statement()]
         while self.starts_statement(self.peek()):
+            if isinstance(statements[-1], GiveNode):
+                self.error("nothing may follow 'give' in the same block")
             statements.append(self.parse_statement())
         return BlockNode(line, col, statements)
 
