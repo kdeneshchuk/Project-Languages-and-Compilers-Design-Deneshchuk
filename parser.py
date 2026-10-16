@@ -19,6 +19,9 @@ class Parser:
     def peek(self):
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
 
+    def peek_next(self):
+        return self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
+
     def eat(self):
         tok = self.tokens[self.pos]
         self.pos += 1
@@ -30,7 +33,7 @@ class Parser:
             raise CompileError(f"line {tok.line}:{tok.col}: {msg}")
         if self.tokens:                      # end of file: just after the last token
             last = self.tokens[-1]
-            col = last.col + len(last.text.encode())
+            col = last.col + last.length
             raise CompileError(f"line {last.line}:{col}: {msg}")
         raise CompileError(f"line 1:1: {msg}")
 
@@ -52,7 +55,55 @@ class Parser:
         tok = self.expect("cmp", "a comparison (equals or differs)")
         return tok, ("==" if tok.text in EQ_TEXTS else "!=")
 
-    def parse_factor(self):                  # factor ::= number | boolean | ident
+    def parse_names(self):                   # ident { "of" ident }
+        first = self.expect("ident", "a name")
+        names = [first.text]
+        while (tok := self.peek()) is not None and tok.kind == "kw" and tok.text == "of":
+            self.eat()
+            names.append(self.expect("ident", "a name after 'of'").text)
+        return first, names
+
+    def parse_access(self):                  # access ::= ident { "of" ident }
+        first, names = self.parse_names()
+        if len(names) == 1:
+            return VarNode(first.line, first.col, first.text)
+        return FieldNode(first.line, first.col, names)
+
+    def parse_args(self, allow_empty=True):  # "(" [ expr { "," expr } ] ")"
+        self.expect("lparen", "'('")
+        args = []
+        tok = self.peek()
+        if not (allow_empty and tok is not None and tok.kind == "rparen"):
+            args.append(self.parse_expr())
+            while (tok := self.peek()) is not None and tok.kind == "comma":
+                self.eat()
+                args.append(self.parse_expr())
+        self.expect("rparen", "')'")
+        return args
+
+    def parse_call(self):                    # ident "(" args ")" [ "of" access ]
+        name = self.eat()
+        args = self.parse_args()
+        tok = self.peek()
+        if tok is not None and tok.kind == "kw" and tok.text == "of":
+            self.eat()
+            _, obj = self.parse_names()
+            return MemberCallNode(name.line, name.col, name.text, args, obj)
+        return CallNode(name.line, name.col, name.text, args)
+
+    def parse_make(self):                    # "make" ident "(" expr { "," expr } ")"
+        make = self.eat()
+        name = self.expect("ident", "a struct name")
+        args = self.parse_args(allow_empty=False)
+        return MakeNode(make.line, make.col, name.text, args)
+
+    def parse_read(self):                    # "read" "(" ")"
+        read = self.eat()
+        self.expect("lparen", "'(' after 'read'")
+        self.expect("rparen", "')'")
+        return ReadNode(read.line, read.col)
+
+    def parse_factor(self):                  # number | boolean | read | make | call | access
         tok = self.peek()
         if tok is None:
             self.error("expected a number, a truth value or a name, found end of file")
@@ -61,9 +112,17 @@ class Parser:
             return NumberNode(tok.line, tok.col, number_value(tok.text))
         if tok.kind == "bool":
             return self.parse_boolean()
+        if tok.kind == "kw" and tok.text == "read":
+            return self.parse_read()
+        if tok.kind == "kw" and tok.text == "make":
+            return self.parse_make()
         if tok.kind == "ident":
-            self.eat()
-            return VarNode(tok.line, tok.col, tok.text)
+            nxt = self.peek_next()
+            if nxt is not None and nxt.kind == "lparen":
+                return self.parse_call()
+            return self.parse_access()
+        if tok.kind == "string":
+            self.error("a string literal can only be the argument of 'print'")
         self.error(f"expected a number, a truth value or a name, got '{tok.text}'")
 
     def parse_term(self):                    # term ::= factor { "*" factor }
