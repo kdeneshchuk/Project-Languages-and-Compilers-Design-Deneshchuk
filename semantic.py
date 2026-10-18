@@ -47,6 +47,7 @@ class SemanticChecker:
     def __init__(self):
         self.scopes = [{}]              # a stack of frames; the bottom one is the top level
         self.structs = {}               # struct name -> StructInfo
+        self.struct_names = set()       # the names of all the structs, known before any is checked
         self.tasks = {}                 # task name -> TaskNode: the signatures
         self.global_consts = {}         # top-level "always" constants, seen by every task
         self.top_level_vars = set()     # names of top-level "once" variables (for a clear error)
@@ -80,7 +81,7 @@ class SemanticChecker:
         self.fail(node, f"variable '{name}' is used before its declaration")
 
     def check_not_struct(self, node, name):
-        if name in self.structs:
+        if name in self.struct_names:
             self.fail(node, f"'{name}' is the name of a struct")
 
     def declare(self, node, symbol):
@@ -149,6 +150,7 @@ class SemanticChecker:
     # ---------- program, structs, tasks and blocks ----------
 
     def visit_ProgramNode(self, node):
+        self.struct_names = {s.name for s in node.structs}
         for struct in node.structs:
             self.visit(struct)
         self.collect_top_level(node.statements)
