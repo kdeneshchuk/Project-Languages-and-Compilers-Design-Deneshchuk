@@ -17,7 +17,8 @@ class CodeGen:
         self.strings = {}               # text -> global constant
         self.struct_types = {}          # struct name -> the identified type of the module
         self.functions = {}             # task name -> the function of the module
-        self.current_task = None        # the task whose body is being generated
+        self.methods = {}               # (struct name, task name) -> the function of the module
+        self.current_task = None        # the task or member function being generated
         self.n_slots = 0                # allocas already at the start of the entry block
         self.printf = ir.Function(
             self.module,
@@ -95,6 +96,10 @@ class CodeGen:
             if isinstance(stmt, ConstDeclNode):
                 self.define_constant(stmt)      # a task below may use a constant
         self.declare_tasks(node.tasks)          # every function exists before any body
+        self.declare_methods(node.structs)
+        for struct in node.structs:
+            for task in struct.tasks:
+                self.visit(task)
         for task in node.tasks:
             self.visit(task)
         for stmt in node.statements:
@@ -112,13 +117,32 @@ class CodeGen:
                                    [self.ir_type(p.type_name) for p in task.params])
             self.functions[task.name] = ir.Function(self.module, fnty, name=f"fn.{task.name}")
 
+    def declare_methods(self, structs):
+        """One function per (struct, member function); the first parameter points to the object."""
+        for struct in structs:
+            this_type = ir.PointerType(self.struct_types[struct.name])
+            for task in struct.tasks:
+                fnty = ir.FunctionType(
+                    self.ir_type(task.result_type),
+                    [this_type] + [self.ir_type(p.type_name) for p in task.params])
+                self.methods[(struct.name, task.name)] = ir.Function(
+                    self.module, fnty, name=f"{struct.name}_{task.name}")
+
     def visit_TaskNode(self, node):
         saved = (self.builder, self.function, self.n_slots, self.current_task)
-        self.function = self.functions[node.name]
+        if node.is_member:
+            self.function = self.methods[(node.owner, node.name)]
+        else:
+            self.function = self.functions[node.name]
         self.current_task = node
         self.n_slots = 0
         self.builder = ir.IRBuilder(self.function.append_basic_block("entry"))
-        for arg, p in zip(self.function.args, node.params):
+        args = list(self.function.args)
+        if node.is_member:
+            args[0].name = "this"
+            node.this.ptr = args[0]             # already a pointer to the object: no alloca
+            args = args[1:]
+        for arg, p in zip(args, node.params):
             arg.name = p.name
             p.symbol.ptr = self.new_slot(self.ir_type(p.type_name), p.name)
             self.builder.store(arg, p.symbol.ptr)
@@ -194,7 +218,8 @@ class CodeGen:
         symbol = node.symbol
         if symbol.kind == "const":
             return symbol.const
-        return self.builder.load(symbol.ptr)
+        # a variable (empty path) or a field of `this` (one gep on the pointer to the object)
+        return self.builder.load(self.address_of(symbol.ptr, node.path))
 
     def visit_FieldNode(self, node):
         ptr = self.address_of(node.symbol.ptr, node.path)
@@ -209,9 +234,20 @@ class CodeGen:
         return result
 
     def visit_CallNode(self, node):
+        callee = node.method if node.method is not None else node.task
         args = [self.coerce(self.visit(a), a.type, p.type_name)
-                for a, p in zip(node.args, node.task.params)]
+                for a, p in zip(node.args, callee.params)]
+        if node.method is not None:             # a member function called on the same object
+            fn = self.methods[(callee.owner, callee.name)]
+            return self.builder.call(fn, [self.current_task.this.ptr] + args)
         return self.builder.call(self.functions[node.name], args)
+
+    def visit_MemberCallNode(self, node):
+        obj = self.address_of(node.symbol.ptr, node.path)   # the address of the object: not a copy
+        args = [self.coerce(self.visit(a), a.type, p.type_name)
+                for a, p in zip(node.args, node.method.params)]
+        fn = self.methods[(node.method.owner, node.method.name)]
+        return self.builder.call(fn, [obj] + args)
 
     def visit_BinOpNode(self, node):
         left = self.coerce(self.visit(node.left), node.left.type, node.operand_type)
