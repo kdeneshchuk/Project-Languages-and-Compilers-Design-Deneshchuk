@@ -15,6 +15,7 @@ class CodeGen:
         self.module = ir.Module(name="telly")
         self.module.triple = llvm.get_default_triple()
         self.strings = {}               # text -> global constant
+        self.struct_types = {}          # struct name -> the identified type of the module
         self.functions = {}             # task name -> the function of the module
         self.current_task = None        # the task whose body is being generated
         self.n_slots = 0                # allocas already at the start of the entry block
@@ -37,6 +38,11 @@ class CodeGen:
 
     # ---------- helpers ----------
 
+    def ir_type(self, name):
+        if name in LLVM_TYPES:
+            return LLVM_TYPES[name]
+        return self.struct_types[name]
+
     def coerce(self, value, have, want):
         if have == "int" and want == "long":
             return self.builder.sext(value, I64)
@@ -53,6 +59,13 @@ class CodeGen:
         ptr = self.builder.alloca(llvm_type, name=name)
         self.n_slots += 1
         self.builder.position_at_end(saved)
+        return ptr
+
+    def address_of(self, ptr, path):
+        """One gep per link of a chain; the indexes come from the symbol table, never from names."""
+        for index in path:
+            ptr = self.builder.gep(
+                ptr, [ir.Constant(I32, 0), ir.Constant(I32, index)], inbounds=True)
         return ptr
 
     def str_ptr(self, text):
@@ -73,11 +86,11 @@ class CodeGen:
     def define_constant(self, node):
         node.symbol.const = ir.Constant(LLVM_TYPES[node.type_name], int(node.value.value))
 
-    # ---------- program, tasks and blocks ----------
+    # ---------- program, structs, tasks and blocks ----------
 
     def visit_ProgramNode(self, node):
         for struct in node.structs:
-            self.visit(struct)          # no method yet: a clear error, not silence
+            self.visit(struct)
         for stmt in node.statements:
             if isinstance(stmt, ConstDeclNode):
                 self.define_constant(stmt)      # a task below may use a constant
@@ -88,10 +101,15 @@ class CodeGen:
             self.visit(stmt)
         self.visit(node.tell)
 
+    def visit_StructNode(self, node):
+        st = self.module.context.get_identified_type(node.name)
+        st.set_body(*[self.ir_type(f.type_name) for f in node.fields])
+        self.struct_types[node.name] = st
+
     def declare_tasks(self, tasks):
         for task in tasks:
-            fnty = ir.FunctionType(LLVM_TYPES[task.result_type],
-                                   [LLVM_TYPES[p.type_name] for p in task.params])
+            fnty = ir.FunctionType(self.ir_type(task.result_type),
+                                   [self.ir_type(p.type_name) for p in task.params])
             self.functions[task.name] = ir.Function(self.module, fnty, name=f"fn.{task.name}")
 
     def visit_TaskNode(self, node):
@@ -102,7 +120,7 @@ class CodeGen:
         self.builder = ir.IRBuilder(self.function.append_basic_block("entry"))
         for arg, p in zip(self.function.args, node.params):
             arg.name = p.name
-            p.symbol.ptr = self.new_slot(LLVM_TYPES[p.type_name], p.name)
+            p.symbol.ptr = self.new_slot(self.ir_type(p.type_name), p.name)
             self.builder.store(arg, p.symbol.ptr)
         self.visit(node.body)
         self.builder, self.function, self.n_slots, self.current_task = saved
@@ -118,7 +136,7 @@ class CodeGen:
 
     def visit_VarDeclNode(self, node):
         value = self.coerce(self.visit(node.init), node.init.type, node.type_name)
-        node.symbol.ptr = self.new_slot(LLVM_TYPES[node.type_name], node.name)
+        node.symbol.ptr = self.new_slot(self.ir_type(node.type_name), node.name)
         self.builder.store(value, node.symbol.ptr)
 
     def visit_AssignNode(self, node):
@@ -177,6 +195,18 @@ class CodeGen:
         if symbol.kind == "const":
             return symbol.const
         return self.builder.load(symbol.ptr)
+
+    def visit_FieldNode(self, node):
+        ptr = self.address_of(node.symbol.ptr, node.path)
+        return self.builder.load(ptr)
+
+    def visit_MakeNode(self, node):
+        """The whole object as one value: undef, then one insertvalue per field, in order."""
+        result = ir.Constant(self.struct_types[node.struct_name], ir.Undefined)
+        for arg, field in zip(node.args, node.info.fields):
+            value = self.coerce(self.visit(arg), arg.type, field.type_name)
+            result = self.builder.insert_value(result, value, field.index)
+        return result
 
     def visit_CallNode(self, node):
         args = [self.coerce(self.visit(a), a.type, p.type_name)

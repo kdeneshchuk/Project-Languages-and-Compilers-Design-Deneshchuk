@@ -11,20 +11,42 @@ def fits(have, want):
     return have == want or (have == "int" and want == "long")
 
 
+class At:
+    """A bare position, for an error on one name of a chain."""
+    def __init__(self, pos):
+        self.line, self.col = pos
+
+
 class Symbol:
     """What the checker knows about one name."""
     def __init__(self, name, type_name, mutable, kind):
         self.name = name
-        self.type_name = type_name      # "int", "long", "flag"
+        self.type_name = type_name      # "int", "long", "flag" or the name of a struct
         self.mutable = mutable          # True only for "once changing"
         self.kind = kind                # "const" or "var"
         self.const = None               # set by the code generator: the value of a constant
         self.ptr = None                 # set by the code generator: the slot of a variable
 
 
+class FieldInfo:
+    def __init__(self, name, type_name, mutable, index):
+        self.name = name
+        self.type_name = type_name
+        self.mutable = mutable
+        self.index = index              # the position in the struct: what the gep uses
+
+
+class StructInfo:
+    def __init__(self, name, fields):
+        self.name = name
+        self.fields = fields            # in the order of the declaration
+        self.by_name = {f.name: f for f in fields}
+
+
 class SemanticChecker:
     def __init__(self):
         self.scopes = [{}]              # a stack of frames; the bottom one is the top level
+        self.structs = {}               # struct name -> StructInfo
         self.tasks = {}                 # task name -> TaskNode: the signatures
         self.global_consts = {}         # top-level "always" constants, seen by every task
         self.top_level_vars = set()     # names of top-level "once" variables (for a clear error)
@@ -57,7 +79,12 @@ class SemanticChecker:
             self.fail(node, f"variable '{name}' of the top level is not visible inside a task")
         self.fail(node, f"variable '{name}' is used before its declaration")
 
+    def check_not_struct(self, node, name):
+        if name in self.structs:
+            self.fail(node, f"'{name}' is the name of a struct")
+
     def declare(self, node, symbol):
+        self.check_not_struct(node, symbol.name)
         if symbol.name in self.scopes[-1]:
             self.fail(node, f"'{symbol.name}' is already declared in this scope")
         self.scopes[-1][symbol.name] = symbol
@@ -70,6 +97,26 @@ class SemanticChecker:
             self.fail(expr, f"number {expr.value} does not fit in {want}")
         self.fail(at, f"cannot {what} of type {want} with a value of type {have}")
 
+    def resolve_chain(self, names, positions):
+        """`x of center of c`: the variable is the last name, the fields follow from the inside out.
+        Returns the symbol, the list of fields passed, their indexes and the type of the end."""
+        symbol = self.lookup(names[-1])
+        if symbol is None:
+            self.unknown(At(positions[-1]), names[-1])
+        t = symbol.type_name
+        links, path = [], []
+        for i in range(len(names) - 2, -1, -1):
+            fname, where = names[i], At(positions[i])
+            if t not in self.structs:
+                self.fail(where, f"cannot take field '{fname}' of a value of type {t}")
+            field = self.structs[t].by_name.get(fname)
+            if field is None:
+                self.fail(where, f"struct '{t}' has no field '{fname}'")
+            links.append(field)
+            path.append(field.index)
+            t = field.type_name
+        return symbol, links, path, t
+
     # ---------- collecting: before any body is checked ----------
 
     def collect_top_level(self, statements):
@@ -79,6 +126,7 @@ class SemanticChecker:
             elif isinstance(stmt, ConstDeclNode):
                 self.visit(stmt.value)
                 self.check_assignable(stmt.value, stmt.type_name, stmt, f"initialise '{stmt.name}'")
+                self.check_not_struct(stmt, stmt.name)
                 if stmt.name in self.global_consts:
                     self.fail(stmt, f"'{stmt.name}' is already declared in this scope")
                 stmt.symbol = Symbol(stmt.name, stmt.type_name, False, "const")
@@ -86,20 +134,23 @@ class SemanticChecker:
 
     def collect_tasks(self, tasks):
         for task in tasks:
+            if task.name in self.structs:
+                self.fail(task, f"task '{task.name}' has the name of a struct")
             if task.name in self.tasks:
                 self.fail(task, f"task '{task.name}' is already declared")
             seen = set()
             for p in task.params:
+                self.check_not_struct(p, p.name)
                 if p.name in seen:
                     self.fail(p, f"parameter '{p.name}' is already declared in task '{task.name}'")
                 seen.add(p.name)
             self.tasks[task.name] = task
 
-    # ---------- program, tasks and blocks ----------
+    # ---------- program, structs, tasks and blocks ----------
 
     def visit_ProgramNode(self, node):
         for struct in node.structs:
-            self.visit(struct)          # no method yet: "not supported yet"
+            self.visit(struct)
         self.collect_top_level(node.statements)
         self.collect_tasks(node.tasks)
         for task in node.tasks:
@@ -107,6 +158,23 @@ class SemanticChecker:
         for stmt in node.statements:
             self.visit(stmt)
         self.visit(node.tell)
+
+    def visit_StructNode(self, node):
+        if node.name in self.structs:
+            self.fail(node, f"struct '{node.name}' is already declared")
+        if node.tasks:
+            self.fail(node.tasks[0], "this construct is not supported yet")
+        fields, seen = [], set()
+        for index, f in enumerate(node.fields):
+            self.check_not_struct(f, f.name)
+            if f.name in seen:
+                self.fail(f, f"field '{f.name}' is already declared in struct '{node.name}'")
+            seen.add(f.name)
+            if f.type_name == node.name:
+                self.fail(f, f"struct '{node.name}' cannot contain itself")
+            fields.append(FieldInfo(f.name, f.type_name, f.mutable, index))
+        node.info = StructInfo(node.name, fields)
+        self.structs[node.name] = node.info
 
     def visit_TaskNode(self, node):
         saved = (self.scopes, self.current_task)
@@ -149,6 +217,8 @@ class SemanticChecker:
             self.unknown(node, name)
         if not symbol.mutable:
             self.fail(node, f"cannot assign to '{name}': it is not 'once changing'")
+        if symbol.type_name in self.structs:
+            self.fail(node, "this construct is not supported yet")
         self.visit(node.value)
         self.check_assignable(node.value, symbol.type_name, node, f"assign to '{name}'")
         node.symbol = symbol
@@ -171,7 +241,9 @@ class SemanticChecker:
                             f"but this value has type {value_type}")
 
     def visit_TellNode(self, node):
-        self.visit(node.value)
+        t = self.visit(node.value)
+        if t in self.structs:
+            self.fail(node.value, f"cannot tell a value of type {t}: an object cannot be told")
 
     # ---------- expressions: every visit sets node.type and returns it ----------
 
@@ -191,6 +263,23 @@ class SemanticChecker:
         node.type = symbol.type_name
         return node.type
 
+    def visit_FieldNode(self, node):
+        node.symbol, node.links, node.path, node.type = self.resolve_chain(node.names, node.positions)
+        return node.type
+
+    def visit_MakeNode(self, node):
+        info = self.structs.get(node.struct_name)
+        if info is None:
+            self.fail(node, f"struct '{node.struct_name}' is not declared")
+        if len(node.args) != len(info.fields):
+            self.fail(node, f"'{info.name}' needs {len(info.fields)} value(s), got {len(node.args)}")
+        for arg, field in zip(node.args, info.fields):
+            self.visit(arg)
+            self.check_assignable(arg, field.type_name, arg, f"initialise field '{field.name}'")
+        node.info = info
+        node.type = info.name
+        return node.type
+
     def visit_CallNode(self, node):
         task = self.tasks.get(node.name)
         if task is None:
@@ -208,6 +297,9 @@ class SemanticChecker:
     def visit_BinOpNode(self, node):
         lt = self.visit(node.left)
         rt = self.visit(node.right)
+        for t in (lt, rt):
+            if t in self.structs:
+                self.fail(node, f"cannot apply '{node.op}' to an object of type {t}")
         if node.op in ("+", "-", "*"):
             if "flag" in (lt, rt):
                 self.fail(node, f"cannot apply '{node.op}' to flag")
