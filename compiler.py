@@ -9,6 +9,12 @@ USAGE = ("usage: compiler.py input.txt output.ll\n"
          "       compiler.py [--ast | --tokens] input.txt")
 
 
+def fail(message):
+    """The one line that reports an error: stderr, exit code 1, and nothing is written."""
+    print(f"compilation error: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
 def main_cli():
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -40,21 +46,22 @@ def main_cli():
     try:
         tokens = lex(data)
         if mode == "--tokens":
-            for tok in tokens:
-                print(f"{tok.line}:{tok.col} {tok.kind} {tok.text!r}")
-            return
-        tree = Parser(tokens).parse_program()
-        if mode == "--ast":
-            output = "\n".join(tree.dump_lines())
+            lines = [f"{tok.line}:{tok.col} {tok.kind} {tok.text!r}" for tok in tokens]
+            output = "\n".join(lines) if lines else None
         else:
-            SemanticChecker().check(tree)
-            module_text = str(CodeGen().generate(tree))
+            tree = Parser(tokens).parse_program()
+            if mode == "--ast":
+                output = "\n".join(tree.dump_lines())
+            else:
+                SemanticChecker().check(tree)
+                module_text = str(CodeGen().generate(tree))
     except CompileError as e:
-        print(f"compilation error: {e}", file=sys.stderr)
-        sys.exit(1)
+        fail(str(e))
     except RecursionError:
-        print("compilation error: nesting is too deep", file=sys.stderr)
-        sys.exit(1)
+        fail("nesting is too deep")
+    except Exception as e:                      # a bug of the compiler is never a traceback
+        reason = " ".join(f"{type(e).__name__}: {e}".split())
+        fail(f"internal error ({reason})")
 
     if output is not None:
         print(output)
