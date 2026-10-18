@@ -1,0 +1,4 @@
+task f() giving int:
+  once int a was 1.
+end.
+tell f().

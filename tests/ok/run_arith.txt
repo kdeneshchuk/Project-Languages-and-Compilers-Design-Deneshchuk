@@ -1,0 +1,7 @@
+always int base is 2.
+once int a was base + 3 * 4.
+once int b was a - 4 - 3.
+once int c was a * 2.
+print(a).
+print(b).
+tell c.

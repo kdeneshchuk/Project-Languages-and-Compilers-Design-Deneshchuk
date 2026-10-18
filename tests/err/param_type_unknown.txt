@@ -1,0 +1,4 @@
+task f(Ghost g) giving int:
+  give 1.
+end.
+tell 1.

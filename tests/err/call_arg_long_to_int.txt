@@ -1,0 +1,5 @@
+task f(int a, long b) giving int:
+  give a.
+end.
+once long big was 5.
+tell f(big, 2).

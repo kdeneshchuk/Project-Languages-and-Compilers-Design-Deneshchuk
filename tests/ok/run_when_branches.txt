@@ -1,0 +1,16 @@
+once int n was 7.
+when n equals 7:
+  print("seven").
+otherwise:
+  print("other").
+end.
+when n differs 7:
+  print("not seven").
+otherwise:
+  when n equals 8:
+    print("eight").
+  otherwise:
+    print("neither").
+  end.
+end.
+tell n.

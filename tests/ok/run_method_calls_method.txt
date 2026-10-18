@@ -1,0 +1,16 @@
+struct C:
+  once changing int v.
+  task inc() giving int:
+    v became v + 1.
+    give v.
+  end.
+  task inc2() giving int:
+    once int a was inc().
+    once int b was inc().
+    give b.
+  end.
+end.
+once changing C c was make C(0).
+once int r was inc2() of c.
+print(r).
+tell v of c.

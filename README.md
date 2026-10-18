@@ -5,8 +5,10 @@ sequence of sentences; every sentence ends with a full stop. Words carry the
 meaning instead of symbols: a variable *was* something once, and later it
 *became* something else.
 
-This repository is stage 1 of the CS400 course project: the language design,
-a hand-written lexer, a recursive-descent parser and the AST it builds.
+This repository is stage 2 of the CS400 course project. Stage 1 gave the
+language a lexer, a parser and an AST. Stage 2 makes it run: tasks
+(functions), structs with fields and member functions, `read` and `print`, a
+semantic pass and code generation to LLVM IR through `llvmlite`.
 
 ```
 always int LEGAL_AGE is 18.
@@ -22,11 +24,16 @@ end.
 tell allowed.
 ```
 
+`age` is 19 and `LEGAL_AGE` is 18, so the comparison is false and the
+program reports `Program exit with result false`.
+
 ## The language
 
 ### Types
 
-Three types: `int` (32-bit), `long` (64-bit) and `flag` (boolean).
+Three built-in types: `int` (32-bit), `long` (64-bit) and `flag` (boolean).
+A struct declared in the program is a type too. A type name is `int`, `long`,
+`flag` or the name of a struct declared above.
 
 ```
 once int small was 42.
@@ -49,7 +56,8 @@ once changing int score was 0.
 ```
 
 The verbs are the tense of the sentence: a constant *is*, a variable *was*
-set once, and only a `changing` one later *became* something else.
+set once, and only a `changing` one later *became* something else. A
+constant is `int`, `long` or `flag`, never an object.
 
 ### Assignment
 
@@ -60,8 +68,8 @@ score became score + 10.
 ### Expressions
 
 Arithmetic uses `+`, `-` and `*`. Multiplication binds tighter, and
-operators of equal precedence group from left to right. There are no
-parentheses and no division.
+operators of equal precedence group from left to right. There is no
+division and no grouping parentheses.
 
 ```
 once int a was 2 + 3 * 4.
@@ -111,62 +119,377 @@ end.
 
 ### Reporting the result and ending the program
 
-`tell` names the value the program reports at the end. Stage 1 only parses
-it; running the program comes in stage 2. It takes a number, a truth value or
-a name, never an operation, and it is the last statement of every program.
+`tell` names the value the program reports at the end. It takes a number, a
+truth value, a name, a field chain, a call, a member call or `read()`, never
+an operation or an object, and it is the last statement of every program,
+never inside a block or a task. The compiled program writes
+`Program exit with result N`, where `N` is the value; a `flag` is written as
+`true` or `false`.
 
 ```
 tell score.
 ```
 
-### Overflow of number literals
-
-A number written next to its type must fit in it:
-
-```
-once int x was 2147483647.
-once long y was 3000000000.
-```
-
-Both are accepted. `once int z was 2147483648.` is a compilation error because
-the number does not fit in `int`, and a number above 9223372036854775807 does
-not fit even in `long`.
-
 ### Reserved words
 
 `always`, `once`, `changing`, `is`, `was`, `became`, `when`, `otherwise`,
-`end`, `tell`, `int`, `long`, `flag`, `equals`, `differs`, `yes`, `no`.
+`end`, `tell`, `int`, `long`, `flag`, `equals`, `differs`, `yes`, `no`,
+`struct`, `task`, `giving`, `give`, `of`, `make`, `print`, `read`.
 
 Names are letters, digits and `_`, and may not start with a digit. Keywords
 are case-sensitive, so `Tell` and `YES` are ordinary names.
 
 ### Not part of the language
 
-Parentheses, division, `<`, `>`, a lone `=` or `!`, `{`, `}`, `;`, a sign in
-front of a number (write `0 - 5`), two comparisons in one expression,
-anything after `tell`, and comments. Each of these is a compilation error.
+Division, `<`, `>`, a lone `=` or `!`, `{`, `}`, `;`, a sign in front of a
+number (write `0 - 5`), two comparisons in one expression, anything after
+`tell`, comments, grouping parentheses (`(1 + 2)`), a task or a struct
+inside a task, and two tasks with one name. Parentheses exist only in a call,
+in `make`, in `read()` and in `print(...)`. Each of the above is a
+compilation error.
+
+### Program order
+
+```
+program ::= { struct_decl } { task_decl } { statement } tell_stmt
+```
+
+Structs come first, then tasks, then statements, then the final `tell`. A
+struct after a task or a statement, or a task after a statement, is an error
+at that line.
+
+## Types and expressions: the rules
+
+1. A decimal number has the narrowest type it fits: `int` up to
+   2147483647, then `long` up to 9223372036854775807. A bigger number is an
+   error.
+2. `+`, `-` and `*` take two numbers (`int` or `long`) and give the wider
+   type: `int + long` is `long`. A `flag` or an object operand is an error.
+3. `equals` and `differs` take two numbers of any width, or two `flag`s, and
+   give a `flag`. A `flag` against a number, or an object operand, is an
+   error.
+4. An `int` widens into `long` where a `long` is expected: an initialiser, an
+   assignment, a field, an argument, a `give`. Nothing else converts: a
+   `long` never narrows, and a `flag` never meets a number.
+5. The condition of `when` is a `flag`.
+6. Overflow is checked by type, not by value. A number written next to its
+   type must fit it (`once int z was 2147483648.` is an error). A `long`
+   expression cannot go into an `int` (`once int x was 5 + 3000000000.` and
+   `x became 3000000000.` are errors), but two `int` numbers whose sum does
+   not fit are not detected: `2000000000 + 2000000000` is an `int`.
+
+## Scopes
+
+1. Every block of a `when` is a scope of its own: the block after `:` and
+   the block after `otherwise:` are two scopes. A task body is a scope too.
+2. A declaration goes into the innermost scope. The same name cannot be
+   declared twice in one scope, the body of a task included.
+3. An inner scope may declare a name that an outer one has, with any type;
+   it hides the outer one until the end of the block (shadowing). A task
+   body may declare a name of one of its parameters.
+4. A name is looked up from the innermost scope outwards and takes the first
+   hit. At the top level a name must be declared before its first use. A name
+   that is in no scope, including one whose block has ended, is an error.
+   The one exception is the global constants: an `always` declared at the
+   top level, outside any `when`, is visible in every task and member
+   function, wherever it stands, even above the constant (see Tasks,
+   rule 3). An `always` inside a `when` or a task is an ordinary local name.
+5. A variable, a parameter or a field may have the name of a task, because
+   a call is told from a name by its `(`. It may not have the name of a
+   struct.
+
+## Tasks
+
+A task is a function. The rules come first; the syntax follows.
+
+1. A task has a name, parameters and a result type. A parameter type and
+   the result type are `int`, `long`, `flag` or the name of a struct
+   declared above. Parameter names are unique within a task.
+2. A parameter is a constant copy of its argument. It cannot be
+   assigned, even if the caller's variable is `once changing`.
+3. A name in a task body is looked up among the parameters and the
+   task's own variables (the innermost `when` block first, then outwards),
+   then among the global `always` constants. The `once` variables of the
+   top level are not visible. A global constant is visible in every task,
+   also in one declared above the constant. A parameter or a local
+   variable named like a global constant hides it.
+   A local variable may have the name of a parameter: it hides the
+   parameter from its declaration to the end of its block. The same name
+   cannot be declared twice in one block, the block of a task body
+   included. A body also sees all the tasks of the program (to call them)
+   and all the structs (as types).
+4. A task leaves with `give`. The last statement of the body is `give`;
+   `give` may also stand inside `when` to leave early. In every block
+   `give` is the last statement: nothing follows it in the same block. The
+   value must have the result type. An `int` may be given where `long` is
+   expected; nothing else converts.
+5. A call has the result type of its task. It stands wherever a factor
+   can: in an expression, as an argument of another call, after `tell`,
+   `give` and inside `print`. A call alone is not a statement.
+6. A call has as many arguments as the task has parameters, and each
+   argument has the type of its parameter. An `int` argument may go into
+   a `long` parameter.
+7. All signatures are collected before any body is checked, so a task may
+   call itself and any task declared below it.
+8. A task name is unique, is not the name of a struct, and is not `read`
+   or `print`.
+9. Tasks come after the structs and before the statements. `give` stands
+   only inside a task.
+
+```
+task add(int a, int b) giving int:
+    once int r was a + b.
+    give r.
+end.
+
+once int c was add(5, add(3, 2)).
+tell c.
+```
+
+The program reports `Program exit with result 10`.
+
+## Structs
+
+1. A struct has a name and at least one field. Its name is unique, is not
+   the name of a task, and is not `read` or `print`.
+2. A field is written `once type name.` and is constant, or
+   `once changing type name.` and is mutable. Field names are unique within
+   a struct. A field type is `int`, `long`, `flag` or a struct declared
+   above; a struct cannot contain itself. A type name that is none of
+   these is a compilation error.
+3. An object is created with `make T(v1, ..., vn)`. `T` must be a struct,
+   and there is exactly one value for every field, in the order of the
+   fields. A value has the type of its field; an `int` may go into a
+   `long` field. A field of a struct type takes an object: a variable, a
+   call that returns one, or another `make`.
+4. An object variable is declared like any variable:
+   `once changing T p was make T(...).`. The right side may be any
+   expression of type `T`, and then the variable is a copy. Objects are
+   values: a copy can be changed without touching the original. A task gets a
+   constant copy of its argument (Tasks, rule 2); to change an object inside a
+   task, copy it into a `once changing` variable first.
+5. A field is read with `of`, from the inside out: `x of center of c` is
+   the field `x` of the field `center` of the variable `c`. Every link of
+   the chain must exist. A read is allowed on any object.
+6. A field is written with `became` through the same chain, and only if
+   every link is mutable: the variable is `once changing` and every field
+   on the way is `once changing`. A single constant link makes the whole
+   write an error, whichever other links are mutable.
+7. A value of a struct type may be assigned to a variable (`p became q.`)
+   or to a field (`center of c became q.`) when the whole chain is mutable,
+   the value has the same struct type, and every field of that struct, at
+   every depth, is `once changing`.
+8. An operator, `when` and `tell` do not take an object: an object cannot
+   be added, compared or told. It can be passed to a task, given, and
+   printed.
+
+```
+struct Point:
+    once changing int x.
+    once changing int y.
+end.
+
+struct Circle:
+    once Point center.
+    once changing int radius.
+end.
+
+once changing Circle c was make Circle(make Point(10, 20), 5).
+radius of c became 7.
+once int cx was x of center of c.
+tell cx.
+```
+
+The program reports `Program exit with result 10`.
+
+## Member functions
+
+1. A task declared inside a struct, after its fields, is a member
+   function. A task before the first field is an error at that `task`, and
+   a field after a task is an error at that field. A field and a member
+   function of one struct cannot share a name, and neither can two member
+   functions. A member function is not called `read` or `print`.
+2. A member function is called on an object: `name(args) of object`. The
+   object is a variable or a chain: `d2() of p`, `d2() of center of c`. It
+   must have a struct type that declares `name`. A call on a type
+   (`d2() of Point`), on an `int` or on an unknown member is an error. The
+   number and the types of the arguments follow the rules of tasks. A call
+   ends the chain: nothing follows it.
+3. A name inside a member function is looked up among the parameters and
+   locals (the innermost `when` block first, then outwards), then among the
+   fields of the struct, then among the global `always` constants. A
+   parameter or a local named like a field hides the field, and a field
+   named like a global constant hides the constant. The `once` variables of
+   the top level are not visible.
+4. A call `f(...)` inside a member function looks among the member
+   functions of the same struct first, then among the tasks. A member
+   function hides a task of the same name, and `d2()` inside `Point` is
+   called on the same object.
+5. A field that is not `once changing` cannot be assigned, also inside a
+   member function. A parameter cannot be assigned either.
+6. A member function is mutating if it assigns a field of its object, or
+   calls a mutating member function on its object or on a field of it. A
+   mutating function may be called only through a chain where every link is
+   `once changing`: the variable and each field on the way. A non-mutating
+   one may be called on anything. A local variable named like a field does
+   not make a function mutating. A parameter is constant, so a task cannot
+   call a mutating member function on its parameter. Member functions may
+   call each other in a cycle, so mutating functions are decided after all
+   bodies are checked.
+7. `give` in a member function follows the rules of tasks: the last
+   statement of the body, with the result type.
+8. Two member functions whose names in the generated code would be equal
+   (`c` of `A_B` and `B_c` of `A`, both `A_B_c`) are an error at the
+   second one.
+
+```
+struct Point:
+    once changing int x.
+    once changing int y.
+    task d2() giving int:
+        once int r was x * x + y * y.
+        give r.
+    end.
+    task shift(int dx) giving int:
+        x became x + dx.
+        give x.
+    end.
+end.
+
+once changing Point p was make Point(3, 4).
+once int d was d2() of p.
+once int n was shift(2) of p.
+tell n.
+```
+
+`d` is 25, `shift` moves `p.x` to 5, and the program reports
+`Program exit with result 5`.
+
+## read and print
+
+1. `read()` reads one integer from the standard input. Its type is `int`
+   (and an `int` widens into `long` as usual). It takes no arguments and
+   stands wherever a factor can. An empty input gives 0. Operands, call
+   arguments and `make` values are evaluated from left to right, so
+   `make Point(read(), read())` reads `x` first.
+2. `read` and `print` are reserved: a variable, task, parameter, field or
+   member function cannot have these names.
+3. `print(arg).` is a statement. It stands wherever a statement can: at
+   the top level, in a task, a member function and a `when` block. It has no
+   value, so `once int x was print(1).` is an error at `print`. It has
+   exactly one argument.
+4. The argument is one of:
+   - an `int` or `long` value: the number, as `-9` or `6000000000`;
+   - a `flag`: the word `true` or `false`, never `yes`, `no`, `1` or `0`;
+   - a string literal: its text as written;
+   - an object (a variable, a field chain, a call that returns one, or
+     `make`): the name of the struct and its fields in declaration order,
+     `Point{x: 3, y: 4}`; a field that is an object is printed the same way
+     one level down, `Circle{center: Point{x: 3, y: 4}, radius: 2}`, and a
+     `flag` field is `true` or `false`.
+5. A string literal is `"`, any bytes except `"` and a newline, then `"`.
+   There are no escape sequences: `\n` is two characters, and a `%` stays a
+   `%`. A literal stands only as the argument of `print`, and one not closed
+   on its line is an error at its opening `"`.
+6. `print` puts exactly one newline after everything it prints, after the
+   closing `}` of an object too. The output of `print` comes before the
+   last line `Program exit with result N`, which the program writes at
+   `tell`.
+
+With the struct `Point` and its member function `d2` of the previous
+section:
+
+```
+once changing Point p was make Point(read(), read()).
+print("p and its square:").
+print(p).
+print(d2() of p).
+tell x of p.
+```
+
+With `3 4` on the standard input the program prints `p and its square:`,
+`Point{x: 3, y: 4}`, `25` and `Program exit with result 3`.
+
+## Code generation
+
+The IR is built only through the `llvmlite.ir` builder; the only IR text the
+compiler writes is `str(module)`.
+
+- Every `when` becomes `then`, `else` (when there is one) and `merge` basic
+  blocks and one conditional branch; each block ends with exactly one
+  terminator. Every `alloca` goes into the entry block of its function.
+- A struct is a named type, `%"Point" = type {i32, i32}`, an object is an
+  `alloca` of it, and a field is reached with `getelementptr` by the index
+  the semantic pass found, one `gep` per link of a chain. The generator
+  never looks a field up by name.
+- Every task is a function of the module named `fn.<name>`, so a task
+  called `main` or `printf` does not clash with the runtime. All tasks are
+  declared before any body is generated. A parameter is stored into a slot
+  in the task's own entry block, `give` becomes `ret`, a call becomes
+  `call`. Objects travel by value into and out of tasks.
+- A member function is a function named after the struct and the task,
+  `Point_shift`. Its first parameter is a pointer to the object, and a call
+  passes the address of the object, so `shift` changes the caller's object.
+  A field in the body is a `gep` on that pointer.
+- Global `always` constants are not stored anywhere: a use is the constant
+  itself.
+- `printf` and `scanf` are declared in the module, as functions with a type
+  and no body. The formats are global constants: `%d` for `int`, `%lld` for
+  `long`, `%s` with a choice between the strings `true` and `false` for
+  `flag`. At `tell`, an `int` is widened to 64 bits and written with `%lld`
+  like a `long`. An object is printed by walking the field table of its
+  struct, a `gep`, a `load` and a `printf` per field, so a new struct is
+  printed with no new compiler code. The final `Program exit with result N` 
+  is written by `main` at `tell`.
+
+## Setup
+
+Python 3.10 or newer, the `llvmlite` package, and the LLVM tools `lli`, `llc`
+and `clang` to run the result. Tested with Python 3.12.3, llvmlite 0.49.0 and
+LLVM 18.1.3 on Ubuntu.
+
+On Ubuntu or Debian:
+
+```bash
+sudo apt install python3 python3-venv llvm clang
+python3 -m venv .venv
+source .venv/bin/activate
+pip install llvmlite
+```
+
+On macOS, `clang` comes with the Xcode command line tools, and `lli` and
+`llc` with Homebrew's LLVM:
+
+```bash
+xcode-select --install
+brew install llvm
+export PATH="$(brew --prefix llvm)/bin:$PATH"
+python3 -m venv .venv
+source .venv/bin/activate
+pip install llvmlite
+```
 
 ## Running the compiler
 
-Python 3.10 or newer (developed and tested on 3.12) is the only requirement.
-There is nothing to install and nothing to build. On Python 3.9 and older the
-standard library had a module called `parser`, which can shadow this project's
-`parser.py`.
-
 ```bash
-python3 compiler.py --ast examples/age.telly    # print the AST
-python3 compiler.py examples/age.telly          # parse only, print nothing
-python3 compiler.py --tokens examples/age.telly # print the token stream
+source .venv/bin/activate                  # once per terminal
+python3 compiler.py input.txt output.ll    # compile
+python3 compiler.py --ast input.txt        # print the AST, write nothing
+python3 compiler.py --tokens input.txt     # print the token stream
+lli output.ll < input.in                   # run, a program that calls read()
+llc -filetype=obj -relocation-model=pic output.ll -o output.o
+clang -fPIE output.o -o program && ./program
 ```
 
-`--tokens` is a debugging aid: it shows what the lexer produced, one token
-per line, as `line:column kind 'text'`.
+`--ast` prints the tree after parsing, so it reports lexical and syntax
+errors but does not run the semantic pass. The semantic pass runs when a
+program is compiled to `output.ll`.
 
-On an error the compiler prints one line to stderr and exits with a non-zero
-code, and prints nothing to stdout:
+On any error, lexical, syntax or semantic, the compiler prints one line to
+stderr, exits with a non-zero code and writes no output file:
 
 ```
-$ python3 compiler.py --ast tests/err/missing_end.txt
+$ python3 compiler.py tests/err/missing_end.txt out.ll
 compilation error: line 3:1: expected 'end', got 'tell'
 ```
 
@@ -179,52 +502,69 @@ was called wrongly or the file could not be read.
 python3 run_tests.py
 ```
 
-The runner compiles every program in `tests/ok` and compares the AST dump
-with the `.ast` file next to it, then compiles every program in `tests/err`
-and compares the error line with the `.expected` file. It prints one line per
-test and a summary, and exits with a non-zero code if anything failed.
+A test is a program `NAME.txt` with the files next to it that say what to
+check:
 
-```
-PASS  ok/if_else_nested
-FAIL  err/missing_end
+- `tests/ok/NAME.ast`: the AST dump of the program.
+- `tests/ok/NAME.expected`: the program is compiled to `.ll`, built and run
+  (with `lli`, or with `llc` and `clang` if `lli` is missing), and its whole
+  standard output is compared with this file. This is an end-to-end test.
+- `tests/ok/NAME.in`: the standard input of the program. The `.expected` file
+  holds only what the program prints, since the input is not echoed.
+- `tests/err/NAME.expected`: the error line the compiler must print. The
+  runner also checks that the exit code is 1 and that no `.ll` is written.
 
-95 of 96 tests passed
-failed: err/missing_end
-```
+Compiled files go to a temporary directory, never into `tests/`. A valid
+program has an `.ast`, an `.expected`, or both. Four programs from stage 1
+(`expr_compare_arith`, `nesting_at_limit`, `stage2_overflow_not_checked`,
+`stage2_semantics_not_checked`) are correct for the parser but not for the
+semantic pass, so they only have an `.ast` and are not compiled. The runner
+prints one line per test and a summary, says which tests failed and exits
+with a non-zero code if any did.
 
-There are 39 valid and 57 invalid programs. Every feature of the language is
-covered from both sides.
+Every rule in this README is covered by one program that follows it and one
+that breaks it, and the tests are named after the rule they cover.
+
+## VS Code extension (optional)
+
+`vscode-telly/` supports files with the extension `.telly`, or any file whose
+language mode is set to Telly.
+
+- **Highlighting** of keywords, types, strings, names of structs and tasks.
+- **Completions** for 👍 👎 🟰 🚫 and **snippets** for `when`, `struct`,
+  `task` and `print`.
+- **Diagnostics from the compiler.** While you type, the extension compiles
+  the text of the editor with `compiler.py` into a temporary directory and
+  underlines the place named in the error line
+  `compilation error: line L:C: message`; the message shows on hover. The
+  extension has no checks of its own: the compiler is the only judge, so the
+  editor and the terminal always agree. The compiler counts columns in bytes
+  and VS Code in UTF-16 units, so `errors.js` converts them (an emoji is four
+  bytes and two units).
+
+Settings: `telly.diagnostics` (on or off), `telly.pythonPath` (a Python with
+`llvmlite`, e.g. `.venv/bin/python3`) and `telly.compilerPath` (empty means
+`compiler.py` of the open folder).
+
+To install, copy the folder to `~/.vscode/extensions/kdeneshchuk.telly-0.1.0`
+(`~/.vscode-server/extensions/` when VS Code is connected over SSH) and
+reload the window.
 
 ## How it is built
 
 | File | What it does |
 |---|---|
-| `grammar.ebnf` | the grammar, and the rules EBNF cannot express |
-| `lexer.py` | a state machine over bytes: `START`, `IDENT`, `NUMBER`, `EMOJI` |
+| `grammar.ebnf` | the grammar, the lexical rules and the rules EBNF cannot express |
+| `lexer.py` | a state machine over bytes: identifiers, numbers, strings, emoji, symbols |
 | `ast_nodes.py` | the node classes and the `--ast` dump |
 | `parser.py` | recursive descent, one function per grammar rule |
+| `semantic.py` | the semantic pass: symbol table for variables, tasks and structs |
+| `codegen.py` | code generation through the `llvmlite` builder |
 | `compiler.py` | the command line |
 | `run_tests.py` | the test runner |
-| `vscode-telly/` | an optional [VS Code extension](vscode-telly/) that highlights Telly and offers 👍 👎 🟰 🚫 as completions |
+| `vscode-telly/` | an optional [VS Code extension](#vs-code-extension-optional): highlighting, snippets, 👍 👎 🟰 🚫 completions and the compiler's errors under the code |
 
 The lexer reads bytes, not characters. An emoji is four bytes, recognised as
 a byte sequence exactly like a keyword written in letters, so a column after
 an emoji advances by four. A tab counts as one column. Carriage returns are
 ignored, so files with Windows line endings work.
-
-## What stage 1 does not check
-
-Stage 1 is the front end: everything below needs a symbol table or the type
-of an expression, and belongs to stage 2.
-
-- The condition of `when` is parsed as an expression; that it must be a
-  `flag` is not checked yet, so `when 2 + 2:` parses.
-- Overflow is checked for a number literal written next to its type. The
-  value of an expression (`once int x was 3000000000 + 1.`) and of an
-  assignment (`x became 3000000000.`) is not.
-- That a name is declared once, before its first use, and that only a
-  `once changing` variable may be assigned, is not checked.
-
-Two test programs, `tests/ok/stage2_semantics_not_checked.txt` and
-`tests/ok/stage2_overflow_not_checked.txt`, exist to record this boundary:
-they are accepted here on purpose.

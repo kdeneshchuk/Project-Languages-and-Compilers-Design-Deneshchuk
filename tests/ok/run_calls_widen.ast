@@ -1,0 +1,40 @@
+Program
+  Task twice -> long
+    Param v long
+    Block
+      VarDecl r long const
+        BinOp +
+          Var v
+          Var v
+      Give
+        Var r
+  Task add -> int
+    Param a int
+    Param b int
+    Block
+      VarDecl s int const
+        BinOp +
+          Var a
+          Var b
+      Give
+        Var s
+  Task combine -> long
+    Param a int
+    Block
+      VarDecl left long const
+        Call twice
+          Call add
+            Var a
+            Number 1
+      VarDecl right long const
+        Call twice
+          Var a
+      VarDecl both long const
+        BinOp +
+          Var left
+          Var right
+      Give
+        Var both
+  Tell
+    Call combine
+      Number 10

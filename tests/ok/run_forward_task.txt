@@ -1,0 +1,8 @@
+task a() giving int:
+  once int r was b().
+  give r.
+end.
+task b() giving int:
+  give 5.
+end.
+tell a().

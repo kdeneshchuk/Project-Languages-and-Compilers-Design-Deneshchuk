@@ -1,8 +1,8 @@
 {
   "name": "telly",
   "displayName": "Telly Language Support",
-  "description": "Highlighting, emoji completion and snippets for the Telly language",
-  "version": "0.0.1",
+  "description": "Highlighting, emoji completion, snippets and compiler errors for the Telly language",
+  "version": "0.1.0",
   "publisher": "kdeneshchuk",
   "engines": { "vscode": "^1.80.0" },
   "main": "./extension.js",
@@ -22,6 +22,26 @@
     "snippets": [{
       "language": "telly",
       "path": "./snippets/telly.json"
-    }]
+    }],
+    "configuration": {
+      "title": "Telly",
+      "properties": {
+        "telly.diagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run the Telly compiler while typing and underline its error."
+        },
+        "telly.pythonPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Python that has llvmlite installed, e.g. ~/lcd/bin/python3."
+        },
+        "telly.compilerPath": {
+          "type": "string",
+          "default": "",
+          "description": "Full path of compiler.py. Empty means compiler.py in the workspace folder."
+        }
+      }
+    }
   }
 }

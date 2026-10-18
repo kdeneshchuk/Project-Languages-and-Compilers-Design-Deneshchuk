@@ -1,0 +1,4 @@
+task f() giving int:
+  give 1.
+end.
+tell f(.

@@ -1,0 +1,23 @@
+Program
+  VarDecl a int const
+    Read
+  VarDecl b int const
+    Read
+  Print
+    String "sum:"
+  Print
+    BinOp +
+      Var a
+      Var b
+  When
+    BinOp ==
+      Var a
+      Number 0
+    Then
+      Print
+        String "zero"
+    Else
+      Print
+        String "nonzero"
+  Tell
+    Var b

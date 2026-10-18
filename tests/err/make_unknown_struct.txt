@@ -1,0 +1,2 @@
+once int g was make Ghost(1).
+tell 1.

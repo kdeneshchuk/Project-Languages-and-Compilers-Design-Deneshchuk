@@ -1,0 +1,12 @@
+task pick(int v) giving int:
+  once int w was v + 10.
+  when w equals 12:
+    once int v was 50.
+    give v.
+  end.
+  give w.
+end.
+always int v is 1.
+print(pick(2)).
+print(pick(3)).
+tell v.

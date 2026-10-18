@@ -1,0 +1,2 @@
+once int r was look() of z.
+tell r.

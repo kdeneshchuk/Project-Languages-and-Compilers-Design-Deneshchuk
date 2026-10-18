@@ -1,0 +1,10 @@
+task fact(int n) giving int:
+  when n equals 0:
+    give 1.
+  end.
+  once int rest was fact(n - 1).
+  once int result was n * rest.
+  give result.
+end.
+print(fact(5)).
+tell fact(10).

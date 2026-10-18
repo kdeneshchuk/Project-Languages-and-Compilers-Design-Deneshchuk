@@ -1,0 +1,5 @@
+once long big was 3000000000.
+once int small was 5.
+once long total was big * 3 + small.
+print(total).
+tell total.

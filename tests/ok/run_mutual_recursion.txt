@@ -1,0 +1,18 @@
+task even(int n) giving flag:
+  when n equals 0:
+    give yes.
+  end.
+  once int m was n - 1.
+  once flag r was odd(m).
+  give r.
+end.
+task odd(int n) giving flag:
+  when n equals 0:
+    give no.
+  end.
+  once int m was n - 1.
+  once flag r was even(m).
+  give r.
+end.
+print(even(10)).
+tell odd(7).
