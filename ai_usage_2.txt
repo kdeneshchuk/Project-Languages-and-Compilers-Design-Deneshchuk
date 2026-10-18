@@ -1,0 +1,420 @@
+AI USAGE - Project Stage 2 (Telly)
+Author: Khrystyna Deneshchuk
+ 
+======================================================================
+1. TOOLS AND TRANSCRIPTS
+======================================================================
+1) Claude (Anthropic), the Claude app, one long chat inside my course
+   project, on 16 and 18 October 2026. The chat ran out of context once
+   (18 October) and continued from an automatic summary. Used for:
+   discussing the assignment, the language design for stage 2, the grammar,
+   the README, the lexer and parser changes, the semantic pass, the code
+   generator, the CLI, the tests and the test runner, the VS Code extension,
+   reviews of my code against the assignment.
+   On 16 October Claude could not run code: I ran every step on my VM
+   (lcd-course) and pasted the output back. On 18 October Claude also ran
+   my files in its own sandbox (Python, llvmlite, lli) to check them; the
+   files in the repository were still edited and run by me.
+ 
+2) ChatGPT (OpenAI). Used once as an independent reviewer of the finished
+   project against the assignment text, with read-only access (the prompt
+   is in section 7).
+ 
+No other AI tools were used. Where I pasted a terminal output, a file or 
+the assignment text, it is written in square brackets.
+ 
+======================================================================
+2. HOW I WORKED
+======================================================================
+As in stage 1, I first discussed the whole assignment and decided the
+syntax and the rules myself, then built the compiler in small steps: one
+task at a time, and Task 3 in slices (Stage 1 constructs, tasks, structs,
+field writes, member functions, read/print). For every step the AI gave the
+change, an explanation and a check with the expected output. I edited the
+files in VS Code, ran the check on my VM, pasted the real output back and
+committed only when it matched. I asked for a detailed explanation of each
+step before moving on, and I stopped the AI when it went beyond the
+assignment.
+ 
+======================================================================
+3. MY PROMPTS AND WHAT THE AI ANSWERED (in order)
+======================================================================
+ 
+--- Reading the assignment (16 October) ---
+ 
+P1. [Stage 2 assignment PDF] "прочитай уважно стейдж 2"
+    AI: summarised the deadline, the grading, the four tasks, the
+    ai_usage_2.txt rule and the builder-only rule for the IR.
+ 
+P2. [my stage 1 files: ast_nodes.py, lexer.py, parser.py, compiler.py,
+    README, grammar, run_tests.py, test list, git log, stage 1 feedback]
+    "ось прочитай уважно / це все що в мене є з першого стейджу"
+    AI: said stage 1 is a good base; noticed that "." already ends a
+    sentence, so field access needs another syntax (proposed "of"); listed
+    the decisions to take before writing code.
+ 
+P3. "давай спочтаку обговоримо стейдж 2 детально"
+P4. "я хочу просто спочатку загально детально обговорити завдання другого
+    стейджу"
+    AI: explained stage 2 in general: front end -> semantic pass -> code
+    generation, what each task asks for and what is graded.
+ 
+P5. "глянь ще практичні минулі і все що є в проєкті, лекції також щоб мати
+    більше контексту ще"
+P6. [my practice compiler.py and practice README] "ось практичні тут"
+    AI: read the lecture notes of weeks 4-7 and my practices 5-7 and said
+    that stage 2 is mostly practices 4-7 applied to Telly.
+ 
+P7. [the part of the assignment about --ast and the error format]
+    AI: said the text can be read two ways; recommended that --ast stays
+    parser-only, because two valid stage 1 tests are semantically wrong and
+    lecture 7.2 shows the AST before the checks.
+ 
+--- Task 1: language design, grammar, README ---
+ 
+P8. [Task 1 text] "давай з тобою розберемо цей таск"
+    AI: separated what Task 1 requires, what follows from my practices and
+    what is only its proposal; listed the rules the README must contain.
+ 
+P9. "Так, of підходить / виклики можна зробити з дужками й комами / вихід
+    із функції через give давай / структури й функції через end. будемо
+    закривати / назви read print залишимо / Щодо глобальних змінних
+    пропоную шукати спочатку параметр або локальну змінну, потім поле, а
+    потім глобальну змінну"
+    AI: accepted the decisions; pointed out that with the program order
+    "structs, tasks, statements" no global exists yet when a task body is
+    checked, and offered two options (A: globals above the task, B: only
+    global constants, collected first).
+ 
+P10. "давай варіант б, функції бачать глобальні константи always але не
+     бачать змінні once / Константи треба зібрати до перевірки функцій бо
+     в коді вони стоять після них"
+     AI: wrote down the consequences for the README.
+ 
+P11. "Мені підходять struct, task, giving, give / Поля теж можна
+     оголошувати через once / може обʼєкт створювати як make Point(3, 4),
+     щоб не плутати з викликом функції і give має працювати тільки
+     всередині функції"
+     AI: fixed these words; explained that with make a copy is simply
+     "once Point q was p.".
+ 
+P12. [stage 1 grammar.ebnf] "ось граматика першого стейджу, давай
+     оновлювати по завданюю другого"
+P13. "напиши тут в чаті"
+     AI: gave the stage 2 grammar.ebnf.
+ 
+P14. [part of an AI answer about the test bad_type] "що тут зробити"
+P15. [output of cat tests/err/bad_type.* and of a grep for the new words]
+P16. "це ми хіба зараз робимо? не потім в наступних тасках змінювати це?"
+     AI: agreed that the code is changed in Task 2, not now.
+ 
+P17. [stage 1 README] "ось рідмі з стейджу 1"
+     AI: proposed the first block of rules (tasks).
+P18. [two assumptions from the AI answer] "давай перевіримо"
+     AI: checked them against the assignment and the practices (give takes
+     one factor like tell; the shadowing question).
+P19. "довзолимо затінення як у практиках / Локальна змінна може мати те
+     саме ім’я, що й параметр але двічі оголосити одне ім’я в одному блоці
+     не можна"
+P20. "Так, make створює новий об’єкт, а once point q was p. копіює старий /
+     Копіювання в коді залишаємо, об’єкт виводимо через print не через
+     tell"
+P21. "так давай"
+     AI: assembled the whole README.
+P22. [lexer, parser, ast_nodes, compiler, grammar, README]
+     "перевіряй чи все ок тут по першому завданню"
+     AI: found one wrong example result in the README (its own mistake),
+     two missing rules and small issues.
+P23. "так давай повним файлом виправленим"
+P24. "напиши тут в чаті"
+     AI: gave the corrected README.
+P25. "робимо коміти в стилі як і в першому стейджі за умовами"
+P26. "в мене тільки таке в гітігнорі в минулому разі вистачило"
+     [.gitignore with only __pycache__/]
+     AI: explained that stage 2 now writes .ll, .o and binaries, so they
+     must be ignored.
+P27-P28. [git status, git log] "давай тепер розберемо цей таск" [Task 2]
+     AI: explained Task 2 and the rule that the stage 1 tests must not
+     break.
+ 
+--- Task 2: lexer, AST, parser ---
+ 
+P29. "давай тоді з тобою покроково з перевірками та поясненнями будемо
+     робити"
+P30. [git log, 96 of 96 tests] "а не треба ще додатково підлкючати
+     енваройнмент як в практиках?"
+     AI: not for the lexer and parser, llvmlite is needed from Task 3.
+P31. [output with the environment activated]
+P32-P34. [outputs of the lexer checks: an IndentationError in Token, then
+     the token list, then the unclosed-string error]
+     AI: the IndentationError came from its snippet shown at column 0; told
+     me how to indent it; then confirmed the token positions.
+P35. "давай тепер крок 2 розберемо що ми робимо"
+P36. [ast_nodes.py] "окей що ми робимо з поясненнями"
+     AI: added the AST classes for tasks, structs, calls, make, read, print
+     in small pieces with a check after each.
+P37-P38. [outputs, commit]
+P39. [my parse_statement] "self.error(f"cannot start a statement with
+     '{tok.text}'") так?"
+     AI: confirmed it.
+P40. [parser.py, 10 tests failing]
+     AI: found that parse_block had lost its return line after its partial
+     snippet; told me to put it back.
+P41-P42. [outputs of the parser checks]
+P43. "а чому в нас досі не працює тот один тест?"
+     AI: explained that err/parentheses now fails in the parser instead of
+     the lexer.
+P44. [grep output for expect("ident")]
+     AI: two old calls still used the stage 1 message; told me to use
+     expect_name and parse_builtin_type.
+P45. [part of the AI answer] "а виправляти це краще на якому з тасків"
+     AI: now, at the end of Task 2, so the test change sits next to its
+     cause.
+P46-P48. [outputs; the new parentheses.expected; 96 of 96]
+P49. [part of the AI answer] "це ти про що і чому ти так вирішив?"
+     AI: admitted that the step name was confusing and explained the three
+     sub-steps.
+P50-P52. [ast_nodes.py, compiler.py, parser.py; outputs of a 200-level
+     call and a 5000-term expression]
+     AI: added the expression depth limit and printing the AST only after
+     success.
+P53. "а що ми робимо і чому ми зараз це змінюємо? ми ж наче вже не по
+     таску йдемо"
+     AI: agreed that its extra "depth" change was beyond the assignment and
+     withdrew it; the expr_depth limit stayed.
+P54. [git log]
+P55. [all files] "перевір що у нас все ок зроблено по першим двом таскам"
+     AI: checked Task 1 and 2 against the PDF; gave a script that compiles
+     every README example.
+P56-P57. [script output; llvmlite and LLVM versions] "пушити я буду потім"
+ 
+--- Task 3: semantic pass and code generation ---
+ 
+P58. "давай спочатку розберемо цей таск" [Task 3 text]
+     AI: explained the two passes, the symbol table, the builder-only rule
+     and proposed the slices.
+P59. "давай покроково з поясненнями тоді будемо робити"
+     AI: slice 1, semantic.py for the stage 1 constructs.
+P60. "тільки давай детальніше розберемо що ми тут зробили"
+P61. [13 semantic checks, 96 of 96]
+P62. [semantic.py] "так?"
+P63. "розкажи детальніше про наші зміни на цьому кроці"
+     AI: explained codegen.py (alloca in the entry block, when as blocks,
+     tell) and the new compiler.py.
+P64-P67. [outputs: a program with a task compiled silently; grep; IR; a
+     clean re-run]
+     AI: first suspected semantic.py; then found that /tmp/notyet.ll was an
+     old file from an earlier run, and asked me to delete it and re-run; the
+     error was then reported correctly.
+P68. "поясни що ми зробили детальніше"
+     AI: slice 2, tasks, give and calls, with global constants.
+P69-P72. [22 programs PASS, IR of fn.fact, git status, git log, positions
+     of chain links]
+P73. "розкажи тепер тут теж детальніше"
+     AI: slice 3a, structs, make and field chains for reading.
+P74. [26 programs PASS, IR with gep]
+ 
+--- 18 October ---
+ 
+P75. [files, git status] "на якому ми зараз етапі знаходимось і що треба
+     ще додати?"
+P76. "а давай перевіримо що тут все ок до коміту і все працює"
+P77. "так скажи мені як завжди що запустити"
+P78. "нагадай команду активації енваронменту"
+P79-P81. [outputs: all stage 1 programs compiled, a field named like a
+     later struct, 20 programs for field writes]
+     AI: found that a field named like a struct declared further down was
+     not rejected; added struct_names.
+P82. "що ти там робиш? просто перевіряй"
+     [after an empty answer from the AI]
+P83. "що ми зробили в цьому зрізі спочатку поясни"
+     AI: slice 3b, writes to fields and whole objects.
+P84. "так давай і з поясненнями"
+     AI: slice 4, member functions and the mutating rule.
+P85. [35 programs PASS, IR of Point_shift]
+P86. "давай детальніше пояснення де що ми зробили"
+     AI: slice 5, read, print and printing an object.
+P87. [24 programs PASS, scanf/printf in the IR, echo "3" | lli]
+P88. [a simulated internal error gives one line and exit code 1]
+P89. [all final files] "ші юзедж потім додамо / перевіряй дуже уважно чи
+     виконали ми все правильно по першим трьом таскам"
+P90. [my compiler.py] "ось компайлер"
+     AI: ran my files in its sandbox: compiled programs with structs,
+     methods and recursion, ran them with lli and checked 9 error
+     programs; Tasks 1-3 correct, listed README mismatches.
+ 
+--- Task 4: tests ---
+ 
+P91. [Task 4 text]
+     AI: wrote run_tests.py (temporary directory, lli or llc+clang, NAME.in
+     as stdin, the .ast check kept, exit code 1 and no .ll for errors).
+P92. "давай тут в чаті і поясни"
+P93. [96/96 with the new runner]
+      AI: gave a one-time script gen_e2e.py that writes 13 end-to-end tests.
+P94. "а навіщо ми створюємо новий файл?"
+      AI: the script only creates the test files and is deleted; the files
+      can also be made by hand.
+P95. [109/109] AI: gave gen_err.py with 38 invalid programs (all
+      required cases).
+P96-P97. [147/147; .ast files for 4 new tests]
+P98. "давай ще подумаємо щодо тестів, можливо є ще якісь корнер кейси які
+      варто покрити щоб перевірити повністю все"
+      AI: tried 44 more corner cases in its sandbox; no compiler bug found;
+      gave gen_more.py with 13 valid and 31 invalid tests.
+P99-P100. [191/191, git commit]
+ 
+--- Optional extra: VS Code extension ---
+ 
+P101. [the OPTIONAL part of the assignment] "давай ще тут зробимо"
+P102. "рідмі потім підправимо все що ти скинув"
+P103-P104. [the files of vscode-telly]
+      AI: wrote diagnostics from the compiler (errors.js + extension.js),
+      new highlighting, snippets and settings.
+P105. "спочатку розкажи що ти хочеш зробити і чому"
+      AI: explained what and why before I applied it.
+P106. "окей я додала всі файли що далі"
+P107. "дай інструкцію для маку" [then screenshots of VS Code]
+      AI: install steps for Remote-SSH; from my screenshots: the
+      activationEvents warning, and a bug in its own code: a file outside
+      the project folder did not find compiler.py; fixed with a fallback
+      to the first open folder.
+P108. [git status]
+ 
+--- README and the review fixes ---
+ 
+P109. [README] "тепер ось рідмі, що і чому треба змінити"
+      AI: compiled and ran all README examples and 19 rules; proposed 5
+      fixes (tell takes a member call, tell prints int with %lld, .txt in
+      the examples, the test section, objects passed to a task).
+P110. [README after my edits, grep, 191/191]
+P111. [three remarks from the ChatGPT review, section 7]
+      AI: agreed with all three, reproduced them, gave the fixes.
+P112. [codegen.py, compiler.py, semantic.py after the fix; 194/194;
+      versions of Python, llvmlite, LLVM, clang]
+P113. [README with the Setup section]
+P114-P118. [missing_end check, .gitignore, git status] "давай одним-двома
+      комітами закинемо" [git log; a clean clone with a new .venv: 194/194]
+P119. [my stage 1 ai_usage.txt] "ось ші юзедж з минулого стейджу /
+      залогуй всі наші повідомлення , мої промпти та твої відповіді"
+      AI: wrote this file in the format of stage 1.
+ 
+======================================================================
+4. WHAT I TOOK AS IT WAS
+======================================================================
+- grammar.ebnf: the stage 2 rules as the AI wrote them from my decisions.
+- lexer.py: the new words, ( ) , and the STRING state.
+- ast_nodes.py: the new node classes and their labels in --ast.
+- parser.py: the new parse functions (structs, tasks, calls, member calls,
+  make, read, print, give, field chains with positions).
+- semantic.py: the whole semantic pass (symbol table, scopes, global
+  constants, tasks, structs, mutability of chains, mutating member
+  functions with the fixed point).
+- codegen.py: the whole code generator through llvmlite.ir.
+- compiler.py: the structure of the CLI and the error handling.
+- run_tests.py: the new test runner.
+- the test programs and their .expected files (written by the AI in
+  generator scripts that I ran once and deleted).
+- vscode-telly: errors.js, the diagnostics in extension.js, the new
+  highlighting, snippets and settings.
+- the text of README.md.
+ 
+======================================================================
+5. WHAT I DECIDED MYSELF
+======================================================================
+- field access with "of", read from the inside out (x of center of c)
+- calls with parentheses and commas
+- leaving a task with "give"; give only inside a task
+- structs and tasks closed with "end."
+- the words struct, task, giving, give; fields declared with once and
+  once changing
+- objects created with make Point(3, 4), so they are not confused with a
+  call
+- a copy is "once Point q was p."; copying stays in the language
+- an object is printed with print, never told with tell
+- keeping the names read and print
+- name lookup: parameter or local, then field, then global
+- option B: tasks see the global "always" constants, not the "once"
+  variables; constants are collected before the task bodies because they
+  stand after them in the file
+- shadowing as in the practices; one name twice in one block is an error
+- commits in the stage 1 style
+- doing the optional VS Code extension
+- not adding changes beyond the assignment (I stopped the AI's extra
+  "depth" change)
+ 
+======================================================================
+6. WHAT I CHANGED OR CORRECTED
+======================================================================
+- A snippet for Token was pasted at column 0 and gave an IndentationError;
+  I indented it inside the class.
+- After a partial snippet parse_block lost its return line and 10 tests
+  failed; the runner showed it, I pasted the file, and put the line back.
+- parse_var_decl and parse_const_decl still used expect("ident"); I found
+  them with grep and changed them.
+- I updated err/parentheses.expected after checking that the position
+  1:16 stayed the same and only the message changed.
+- A program with a task looked compiled without errors; it was an old
+  /tmp/notyet.ll. I deleted it, re-ran, and got the right error. Since
+  then the runner compiles into a temporary directory.
+- I rejected the AI's "depth" attribute for expressions as beyond the
+  task; only the expr_depth limit in the parser stayed.
+- I asked "why" before applying the generator scripts and the VS Code
+  changes.
+- In VS Code I found the activationEvents warning and that diagnostics did
+  not work for a file outside the project folder; both were fixed.
+- After the ChatGPT review: positions for "nesting is too deep" and
+  internal errors, a test for a field hiding a global constant, setup steps
+  for a clean machine in the README, .venv/ in .gitignore.
+- I edited the README myself in VS Code from the AI's notes (tell with a
+  member call, %lld at tell, .txt in the examples, the test section, the
+  extension section, the setup section).
+ 
+======================================================================
+7. THE CHATGPT REVIEW
+======================================================================
+Prompt, as I sent it (with the assignment text):
+"ось завдання, перевір уважно що все зроблено і що ми нічого не
+пропустили, що все ок тут
+тільки ти нічого не записуй, лише читай"
+ 
+ChatGPT answered that the main part was done (functions, structs, methods,
+read and print, a separate semantic pass, IR through llvmlite, 191/191
+tests) and listed:
+1. ai_usage_2.txt is missing - right; this file is the fix.
+2. The README starts with "source ~/lcd/bin/activate", which exists only
+   on my server - right; a Setup section for Ubuntu and macOS was added,
+   and I checked it with a clean clone and a new .venv (194/194).
+3. "nesting is too deep" and internal errors had no line L:C - right; the
+   compiler now reports the statement it was working on.
+4. No test for a field hiding a global constant - right; a valid and an
+   invalid test were added.
+5. The branch stage2 is not pushed yet; a PR to main with vovaskochko as
+   reviewer and the Moodle submission are needed - right, done at the end.
+ 
+======================================================================
+8. HOW I VERIFIED THE RESULT
+======================================================================
+- After every step I ran py_compile, the test runner and the step's own
+  checks on my VM, and committed only when the real output matched.
+- I read the generated IR for when, tasks (fn.fact), structs (gep by
+  index), member functions (Point_shift with this) and read/print.
+- I ran the read/print example with echo "3" | lli.
+- I checked that an internal error gives one line, exit code 1 and no
+  .ll file.
+- The final run: 194/194 tests (66 valid, 27 of them end to end, 128
+  invalid), also in a clean clone with a fresh virtual environment.
+- I checked the VS Code diagnostics by hand: the error is underlined, and
+  it disappears when the code is fixed.
+ 
+======================================================================
+9. WHAT I UNDERSTOOD
+======================================================================
+The compiler has three parts. First the parser checks if the code is written correctly and makes a tree. 
+With `--ast` I can see this tree. Then the semantic part checks things like types, names and if a variable can be changed. 
+After that the code generator makes LLVM IR.
+
+For `x of center of c`, the compiler finds `c`, then `center`, then `x`. To change `x`, all parts of this chain must be 
+mutable. A member function gets the object it works with, so it can change that object.
+
+I used `llvmlite` for the IR. `when` makes branches, `give` returns a value, and `read` and `print` use `scanf` and `printf`. 
+The tests compile and run the programs, and compare what they print with the expected output.
