@@ -442,13 +442,37 @@ compiler writes is `str(module)`.
   printed with no new compiler code. The final `Program exit with result N` 
   is written by `main` at `tell`.
 
-## Running the compiler
+## Setup
 
-Python 3.10 or newer and the `llvmlite` package. LLVM tools (`llc`, `lli`,
-`clang`) are needed to run the result.
+Python 3.10 or newer, the `llvmlite` package, and the LLVM tools `lli`, `llc`
+and `clang` to run the result. Tested with Python 3.12.3, llvmlite 0.49.0 and
+LLVM 18.1.3 on Ubuntu.
+
+On Ubuntu or Debian:
 
 ```bash
-source ~/lcd/bin/activate                  # a virtual environment with llvmlite
+sudo apt install python3 python3-venv llvm clang
+python3 -m venv .venv
+source .venv/bin/activate
+pip install llvmlite
+```
+
+On macOS, `clang` comes with the Xcode command line tools, and `lli` and
+`llc` with Homebrew's LLVM:
+
+```bash
+xcode-select --install
+brew install llvm
+export PATH="$(brew --prefix llvm)/bin:$PATH"
+python3 -m venv .venv
+source .venv/bin/activate
+pip install llvmlite
+```
+
+## Running the compiler
+
+```bash
+source .venv/bin/activate                  # once per terminal
 python3 compiler.py input.txt output.ll    # compile
 python3 compiler.py --ast input.txt        # print the AST, write nothing
 python3 compiler.py --tokens input.txt     # print the token stream
@@ -519,7 +543,7 @@ language mode is set to Telly.
   bytes and two units).
 
 Settings: `telly.diagnostics` (on or off), `telly.pythonPath` (a Python with
-`llvmlite`, e.g. `~/lcd/bin/python3`) and `telly.compilerPath` (empty means
+`llvmlite`, e.g. `.venv/bin/python3`) and `telly.compilerPath` (empty means
 `compiler.py` of the open folder).
 
 To install, copy the folder to `~/.vscode/extensions/kdeneshchuk.telly-0.1.0`
