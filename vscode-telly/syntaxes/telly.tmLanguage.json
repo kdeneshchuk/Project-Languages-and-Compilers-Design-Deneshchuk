@@ -2,21 +2,37 @@
   "scopeName": "source.telly",
   "name": "Telly",
   "patterns": [
+    { "name": "string.quoted.double.telly",
+      "match": "\"[^\"\\n]*\"" },
+    { "match": "\\b(struct)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "keyword.declaration.telly" },
+        "2": { "name": "entity.name.type.telly" } } },
+    { "match": "\\b(task)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "keyword.declaration.telly" },
+        "2": { "name": "entity.name.function.telly" } } },
     { "name": "keyword.control.telly",
-      "match": "\\b(when|otherwise|end|tell)\\b" },
+      "match": "\\b(when|otherwise|end|tell|give)\\b" },
     { "name": "keyword.declaration.telly",
-      "match": "\\b(always|once|changing|is|was|became)\\b" },
+      "match": "\\b(always|once|changing|is|was|became|giving|make)\\b" },
+    { "name": "keyword.other.telly",
+      "match": "\\b(of)\\b" },
+    { "name": "support.function.builtin.telly",
+      "match": "\\b(print|read)\\b" },
     { "name": "storage.type.telly",
       "match": "\\b(int|long|flag)\\b" },
     { "name": "constant.language.boolean.telly",
       "match": "\\b(yes|no)\\b|👍|👎" },
     { "name": "keyword.operator.comparison.telly",
       "match": "\\b(equals|differs)\\b|🟰|🚫" },
+    { "name": "entity.name.function.call.telly",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()" },
     { "name": "constant.numeric.telly",
       "match": "\\b[0-9]+\\b" },
     { "name": "keyword.operator.arithmetic.telly",
       "match": "[+\\-*]" },
     { "name": "punctuation.telly",
-      "match": "[:.]" }
+      "match": "[:.,()]" }
   ]
 }
