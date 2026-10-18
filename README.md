@@ -120,10 +120,11 @@ end.
 ### Reporting the result and ending the program
 
 `tell` names the value the program reports at the end. It takes a number, a
-truth value, a name, a field chain, a call or `read()`, never an operation or
-an object, and it is the last statement of every program, never inside a
-block or a task. The compiled program writes `Program exit with result N`,
-where `N` is the value; a `flag` is written as `true` or `false`.
+truth value, a name, a field chain, a call, a member call or `read()`, never
+an operation or an object, and it is the last statement of every program,
+never inside a block or a task. The compiled program writes
+`Program exit with result N`, where `N` is the value; a `flag` is written as
+`true` or `false`.
 
 ```
 tell score.
@@ -264,8 +265,9 @@ The program reports `Program exit with result 10`.
 4. An object variable is declared like any variable:
    `once changing T p was make T(...).`. The right side may be any
    expression of type `T`, and then the variable is a copy. Objects are
-   values: a copy, or an object passed to a task, can be changed without
-   touching the original.
+   values: a copy can be changed without touching the original. A task gets a
+   constant copy of its argument (Tasks, rule 2); to change an object inside a
+   task, copy it into a `once changing` variable first.
 5. A field is read with `of`, from the inside out: `x of center of c` is
    the field `x` of the field `center` of the variable `c`. Every link of
    the chain must exist. A read is allowed on any object.
@@ -434,10 +436,11 @@ compiler writes is `str(module)`.
 - `printf` and `scanf` are declared in the module, as functions with a type
   and no body. The formats are global constants: `%d` for `int`, `%lld` for
   `long`, `%s` with a choice between the strings `true` and `false` for
-  `flag`. An object is printed by walking the field table of its struct, a
-  `gep`, a `load` and a `printf` per field, so a new struct is printed with
-  no new compiler code. The final `Program exit with result N` is written
-  by `main` at `tell`.
+  `flag`. At `tell`, an `int` is widened to 64 bits and written with `%lld`
+  like a `long`. An object is printed by walking the field table of its
+  struct, a `gep`, a `load` and a `printf` per field, so a new struct is
+  printed with no new compiler code. The final `Program exit with result N` 
+  is written by `main` at `tell`.
 
 ## Running the compiler
 
@@ -446,9 +449,9 @@ Python 3.10 or newer and the `llvmlite` package. LLVM tools (`llc`, `lli`,
 
 ```bash
 source ~/lcd/bin/activate                  # a virtual environment with llvmlite
-python3 compiler.py input.telly output.ll  # compile
-python3 compiler.py --ast input.telly      # print the AST, write nothing
-python3 compiler.py --tokens input.telly   # print the token stream
+python3 compiler.py input.txt output.ll    # compile
+python3 compiler.py --ast input.txt        # print the AST, write nothing
+python3 compiler.py --tokens input.txt     # print the token stream
 lli output.ll < input.in                   # run, a program that calls read()
 llc -filetype=obj -relocation-model=pic output.ll -o output.o
 clang -fPIE output.o -o program && ./program
@@ -475,17 +478,53 @@ was called wrongly or the file could not be read.
 python3 run_tests.py
 ```
 
-For every program in `tests/ok` the runner compares the AST dump with the
-`.ast` file next to it, then compiles it to `.ll`, builds and runs it, and
-compares the whole standard output with the `.expected` file. A program that
-reads input keeps it next to itself in `NAME.in`, and the runner passes it as
-the standard input; the `.expected` file holds only what the program prints.
-For every program in `tests/err` it compares the error line with the
-`.expected` file. The runner prints one line per test and a summary, says
-which tests failed and exits with a non-zero code if any did.
+A test is a program `NAME.txt` with the files next to it that say what to
+check:
+
+- `tests/ok/NAME.ast`: the AST dump of the program.
+- `tests/ok/NAME.expected`: the program is compiled to `.ll`, built and run
+  (with `lli`, or with `llc` and `clang` if `lli` is missing), and its whole
+  standard output is compared with this file. This is an end-to-end test.
+- `tests/ok/NAME.in`: the standard input of the program. The `.expected` file
+  holds only what the program prints, since the input is not echoed.
+- `tests/err/NAME.expected`: the error line the compiler must print. The
+  runner also checks that the exit code is 1 and that no `.ll` is written.
+
+Compiled files go to a temporary directory, never into `tests/`. A valid
+program has an `.ast`, an `.expected`, or both. Four programs from stage 1
+(`expr_compare_arith`, `nesting_at_limit`, `stage2_overflow_not_checked`,
+`stage2_semantics_not_checked`) are correct for the parser but not for the
+semantic pass, so they only have an `.ast` and are not compiled. The runner
+prints one line per test and a summary, says which tests failed and exits
+with a non-zero code if any did.
 
 Every rule in this README is covered by one program that follows it and one
 that breaks it, and the tests are named after the rule they cover.
+
+## VS Code extension (optional)
+
+`vscode-telly/` supports files with the extension `.telly`, or any file whose
+language mode is set to Telly.
+
+- **Highlighting** of keywords, types, strings, names of structs and tasks.
+- **Completions** for 👍 👎 🟰 🚫 and **snippets** for `when`, `struct`,
+  `task` and `print`.
+- **Diagnostics from the compiler.** While you type, the extension compiles
+  the text of the editor with `compiler.py` into a temporary directory and
+  underlines the place named in the error line
+  `compilation error: line L:C: message`; the message shows on hover. The
+  extension has no checks of its own: the compiler is the only judge, so the
+  editor and the terminal always agree. The compiler counts columns in bytes
+  and VS Code in UTF-16 units, so `errors.js` converts them (an emoji is four
+  bytes and two units).
+
+Settings: `telly.diagnostics` (on or off), `telly.pythonPath` (a Python with
+`llvmlite`, e.g. `~/lcd/bin/python3`) and `telly.compilerPath` (empty means
+`compiler.py` of the open folder).
+
+To install, copy the folder to `~/.vscode/extensions/kdeneshchuk.telly-0.1.0`
+(`~/.vscode-server/extensions/` when VS Code is connected over SSH) and
+reload the window.
 
 ## How it is built
 
@@ -499,7 +538,7 @@ that breaks it, and the tests are named after the rule they cover.
 | `codegen.py` | code generation through the `llvmlite` builder |
 | `compiler.py` | the command line |
 | `run_tests.py` | the test runner |
-| `vscode-telly/` | an optional [VS Code extension](vscode-telly/) that highlights Telly and offers 👍 👎 🟰 🚫 as completions |
+| `vscode-telly/` | an optional [VS Code extension](#vs-code-extension-optional): highlighting, snippets, 👍 👎 🟰 🚫 completions and the compiler's errors under the code |
 
 The lexer reads bytes, not characters. An emoji is four bytes, recognised as
 a byte sequence exactly like a keyword written in letters, so a column after
