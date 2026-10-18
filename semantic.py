@@ -346,6 +346,10 @@ class SemanticChecker:
         if t in self.structs:
             self.fail(node.value, f"cannot tell a value of type {t}: an object cannot be told")
 
+    def visit_PrintNode(self, node):
+        if not isinstance(node.value, StringNode):
+            self.visit(node.value)      # an int, a long, a flag or an object; a literal needs no check
+
     # ---------- expressions: every visit sets node.type and returns it ----------
 
     def visit_NumberNode(self, node):
@@ -354,6 +358,10 @@ class SemanticChecker:
 
     def visit_BoolNode(self, node):
         node.type = "flag"
+        return node.type
+
+    def visit_ReadNode(self, node):
+        node.type = "int"
         return node.type
 
     def visit_VarNode(self, node):

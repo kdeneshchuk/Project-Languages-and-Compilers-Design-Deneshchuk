@@ -4,7 +4,7 @@ from llvmlite import ir
 import llvmlite.binding as llvm
 
 from lexer import CompileError
-from ast_nodes import ConstDeclNode
+from ast_nodes import ConstDeclNode, StringNode, VarNode, FieldNode
 
 I1, I8, I32, I64 = ir.IntType(1), ir.IntType(8), ir.IntType(32), ir.IntType(64)
 LLVM_TYPES = {"int": I32, "long": I64, "flag": I1}
@@ -24,6 +24,11 @@ class CodeGen:
             self.module,
             ir.FunctionType(I32, [ir.PointerType(I8)], var_arg=True),
             name="printf")              # no blocks: a declaration
+        self.scanf = ir.Function(
+            self.module,
+            ir.FunctionType(I32, [ir.PointerType(I8)], var_arg=True),
+            name="scanf")               # no blocks: a declaration
+        self.struct_info = {}           # struct name -> StructInfo: the field table the printing walks
         self.function = ir.Function(self.module, ir.FunctionType(I32, []), name="main")
         self.builder = ir.IRBuilder(self.function.append_basic_block("entry"))
 
@@ -84,6 +89,36 @@ class CodeGen:
     def printf_call(self, fmt, *args):
         self.builder.call(self.printf, [self.str_ptr(fmt)] + list(args))
 
+    def object_ptr(self, arg):
+        """The address of an object to print. A variable or a field is in memory already;
+        a call or a make is a value, so it goes into a temporary slot first."""
+        if isinstance(arg, (VarNode, FieldNode)):
+            return self.address_of(arg.symbol.ptr, arg.path)
+        value = self.visit(arg)
+        slot = self.new_slot(self.ir_type(arg.type), "print.tmp")
+        self.builder.store(value, slot)
+        return slot
+
+    def print_struct(self, ptr, type_name, newline):
+        """Walk the field table of the struct: one gep, load and printf per field."""
+        info = self.struct_info[type_name]
+        self.printf_call(f"{type_name}{{")
+        for i, f in enumerate(info.fields):
+            label = ("" if i == 0 else ", ") + f"{f.name}: "
+            field_ptr = self.address_of(ptr, [f.index])
+            if f.type_name in self.struct_info:
+                self.printf_call(label)
+                self.print_struct(field_ptr, f.type_name, False)
+            elif f.type_name == "flag":
+                chosen = self.builder.select(self.builder.load(field_ptr),
+                                             self.str_ptr("true"), self.str_ptr("false"))
+                self.printf_call(label + "%s", chosen)
+            elif f.type_name == "long":
+                self.printf_call(label + "%lld", self.builder.load(field_ptr))
+            else:
+                self.printf_call(label + "%d", self.builder.load(field_ptr))
+        self.printf_call("}\n" if newline else "}")
+
     def define_constant(self, node):
         node.symbol.const = ir.Constant(LLVM_TYPES[node.type_name], int(node.value.value))
 
@@ -110,6 +145,7 @@ class CodeGen:
         st = self.module.context.get_identified_type(node.name)
         st.set_body(*[self.ir_type(f.type_name) for f in node.fields])
         self.struct_types[node.name] = st
+        self.struct_info[node.name] = node.info
 
     def declare_tasks(self, tasks):
         for task in tasks:
@@ -205,6 +241,28 @@ class CodeGen:
             wide = self.coerce(value, t, "long")
             self.printf_call("Program exit with result %lld\n", wide)
         self.builder.ret(ir.Constant(I32, 0))
+
+    def visit_ReadNode(self, node):
+        slot = self.new_slot(I32, "read")
+        self.builder.store(ir.Constant(I32, 0), slot)       # an empty input gives 0
+        self.builder.call(self.scanf, [self.str_ptr("%d"), slot])
+        return self.builder.load(slot)
+
+    def visit_PrintNode(self, node):
+        arg = node.value
+        if isinstance(arg, StringNode):
+            self.printf_call("%s\n", self.str_ptr(arg.text))        # so a '%' in the text stays a '%'
+            return
+        t = arg.type
+        if t in self.struct_info:
+            self.print_struct(self.object_ptr(arg), t, True)
+        elif t == "flag":
+            chosen = self.builder.select(self.visit(arg), self.str_ptr("true"), self.str_ptr("false"))
+            self.printf_call("%s\n", chosen)
+        elif t == "long":
+            self.printf_call("%lld\n", self.visit(arg))
+        else:
+            self.printf_call("%d\n", self.visit(arg))
 
     # ---------- expressions ----------
 
