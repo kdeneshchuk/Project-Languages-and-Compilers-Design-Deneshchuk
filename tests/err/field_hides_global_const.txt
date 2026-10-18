@@ -1,0 +1,8 @@
+struct Box:
+  once flag K.
+  task get() giving int:
+    give K.
+  end.
+end.
+always int K is 100.
+tell K.

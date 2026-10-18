@@ -4,7 +4,7 @@ from llvmlite import ir
 import llvmlite.binding as llvm
 
 from lexer import CompileError
-from ast_nodes import ConstDeclNode, StringNode, VarNode, FieldNode
+from ast_nodes import ConstDeclNode, StringNode, VarNode, FieldNode, ExprNode
 
 I1, I8, I32, I64 = ir.IntType(1), ir.IntType(8), ir.IntType(32), ir.IntType(64)
 LLVM_TYPES = {"int": I32, "long": I64, "flag": I1}
@@ -37,6 +37,8 @@ class CodeGen:
         return self.module
 
     def visit(self, node):
+        if not isinstance(node, ExprNode):
+            self.at = node      # the statement being generated: where an unexpected error is reported
         method = getattr(self, "visit_" + type(node).__name__, None)
         if method is None:
             raise CompileError(f"line {node.line}:{node.col}: this construct is not supported yet")

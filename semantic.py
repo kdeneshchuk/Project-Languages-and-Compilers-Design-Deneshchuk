@@ -62,6 +62,8 @@ class SemanticChecker:
         self.visit(tree)
 
     def visit(self, node):
+        if not isinstance(node, ExprNode):
+            self.at = node      # the statement being checked: where an unexpected error is reported
         method = getattr(self, "visit_" + type(node).__name__, None)
         if method is None:
             self.fail(node, "this construct is not supported yet")

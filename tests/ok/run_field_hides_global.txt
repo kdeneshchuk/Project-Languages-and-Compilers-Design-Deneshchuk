@@ -1,0 +1,14 @@
+struct Box:
+  once int K.
+  task get() giving int:
+    give K.
+  end.
+end.
+task outside() giving int:
+  give K.
+end.
+always int K is 100.
+once Box b was make Box(7).
+print(get() of b).
+print(outside()).
+tell K.

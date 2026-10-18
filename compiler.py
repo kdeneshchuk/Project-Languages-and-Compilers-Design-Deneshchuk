@@ -14,6 +14,17 @@ def fail(message):
     print(f"compilation error: {message}", file=sys.stderr)
     sys.exit(1)
 
+def position(parser, checker, generator):
+    """Where the compiler was when something unexpected happened: the statement
+    the last stage was working on, or the token the parser was looking at."""
+    for stage in (generator, checker):
+        node = getattr(stage, "at", None)
+        if node is not None:
+            return f"line {node.line}:{node.col}"
+    if parser is not None and parser.tokens:
+        tok = parser.peek() or parser.tokens[-1]
+        return f"line {tok.line}:{tok.col}"
+    return "line 1:1"
 
 def main_cli():
     sys.stdout.reconfigure(encoding="utf-8")
@@ -43,25 +54,29 @@ def main_cli():
 
     output = None
     module_text = None
+    parser = checker = generator = None
     try:
         tokens = lex(data)
         if mode == "--tokens":
             lines = [f"{tok.line}:{tok.col} {tok.kind} {tok.text!r}" for tok in tokens]
             output = "\n".join(lines) if lines else None
         else:
-            tree = Parser(tokens).parse_program()
+            parser = Parser(tokens)
+            tree = parser.parse_program()
             if mode == "--ast":
                 output = "\n".join(tree.dump_lines())
             else:
-                SemanticChecker().check(tree)
-                module_text = str(CodeGen().generate(tree))
+                checker = SemanticChecker()
+                checker.check(tree)
+                generator = CodeGen()
+                module_text = str(generator.generate(tree))
     except CompileError as e:
         fail(str(e))
     except RecursionError:
-        fail("nesting is too deep")
+        fail(f"{position(parser, checker, generator)}: nesting is too deep")
     except Exception as e:                      # a bug of the compiler is never a traceback
         reason = " ".join(f"{type(e).__name__}: {e}".split())
-        fail(f"internal error ({reason})")
+        fail(f"{position(parser, checker, generator)}: internal error ({reason})")
 
     if output is not None:
         print(output)
