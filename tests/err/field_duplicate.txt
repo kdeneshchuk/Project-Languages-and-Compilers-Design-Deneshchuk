@@ -1,0 +1,5 @@
+struct A:
+  once int x.
+  once long x.
+end.
+tell 1.

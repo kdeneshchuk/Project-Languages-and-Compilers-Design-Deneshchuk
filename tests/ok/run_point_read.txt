@@ -1,0 +1,12 @@
+struct Point:
+  once int x.
+  once int y.
+  task d2() giving int:
+    once int r was x * x + y * y.
+    give r.
+  end.
+end.
+once int a was read().
+once int b was read().
+once Point p was make Point(a, b).
+tell d2() of p.

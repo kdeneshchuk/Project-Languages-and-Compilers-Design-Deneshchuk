@@ -1,0 +1,4 @@
+task f(int a, int a) giving int:
+  give a.
+end.
+tell f(1, 2).

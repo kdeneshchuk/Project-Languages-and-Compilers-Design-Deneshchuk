@@ -1,0 +1,18 @@
+struct Counter:
+  once changing int value.
+  once int step.
+  task bump() giving int:
+    value became value + step.
+    give value.
+  end.
+  task peek() giving int:
+    give value.
+  end.
+end.
+once changing Counter k was make Counter(10, 5).
+once int first was bump() of k.
+once int second was bump() of k.
+print(first).
+print(second).
+print(peek() of k).
+tell value of k.

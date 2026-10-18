@@ -1,0 +1,8 @@
+struct P:
+  once changing int x.
+  once int y.
+end.
+task f(P a) giving int:
+  give 1.
+end.
+tell f(3).

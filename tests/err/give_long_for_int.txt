@@ -1,0 +1,4 @@
+task f(long a) giving int:
+  give a.
+end.
+tell f(1).

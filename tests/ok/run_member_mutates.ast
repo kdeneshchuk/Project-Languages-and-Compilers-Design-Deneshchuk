@@ -1,0 +1,32 @@
+Program
+  Struct Counter
+    Member value int mut
+    Member step int const
+    MemberTask bump -> int
+      Block
+        Assign value
+          BinOp +
+            Var value
+            Var step
+        Give
+          Var value
+    MemberTask peek -> int
+      Block
+        Give
+          Var value
+  VarDecl k Counter mut
+    Make Counter
+      Number 10
+      Number 5
+  VarDecl first int const
+    MemberCall bump of k
+  VarDecl second int const
+    MemberCall bump of k
+  Print
+    Var first
+  Print
+    Var second
+  Print
+    MemberCall peek of k
+  Tell
+    Field value of k

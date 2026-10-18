@@ -1,0 +1,3 @@
+once long a was 5.
+once int b was a.
+tell b.

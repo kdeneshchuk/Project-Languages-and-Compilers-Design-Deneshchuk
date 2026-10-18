@@ -1,0 +1,26 @@
+struct A:
+  once int x.
+  task m() giving int:
+    give x.
+  end.
+end.
+struct B:
+  once int y.
+  task get() giving int:
+    once int r was y + 100.
+    give r.
+  end.
+end.
+task A_m() giving int:
+  give 10.
+end.
+task get() giving int:
+  give 1.
+end.
+once int get was get().
+once A a was make A(5).
+once B b was make B(2).
+print(get).
+print(m() of a).
+print(A_m()).
+tell get() of b.

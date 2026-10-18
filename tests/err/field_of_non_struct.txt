@@ -1,0 +1,2 @@
+once int n was 1.
+tell x of n.

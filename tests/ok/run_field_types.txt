@@ -1,0 +1,9 @@
+struct S:
+  once flag on.
+  once long big.
+  once changing int n.
+end.
+once changing S s was make S(yes, 5000000000, 1).
+print(s).
+n of s became 0 - 4.
+tell n of s.

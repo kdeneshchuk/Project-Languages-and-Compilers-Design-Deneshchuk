@@ -1,0 +1,21 @@
+Program
+  Struct Point
+    Member x int mut
+    Member y int mut
+  Struct Circle
+    Member center Point const
+    Member radius int const
+  VarDecl c Circle mut
+    Make Circle
+      Make Point
+        Number 1
+        Number 2
+      Number 5
+  Print
+    Field x of center of c
+  Print
+    Field radius of c
+  Print
+    Var c
+  Tell
+    Field y of center of c

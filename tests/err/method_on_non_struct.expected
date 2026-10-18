@@ -1,0 +1,1 @@
+compilation error: line 2:16: cannot call 'bump' on a value of type int: it has no member functions

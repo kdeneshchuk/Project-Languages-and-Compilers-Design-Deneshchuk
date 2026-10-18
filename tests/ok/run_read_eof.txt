@@ -1,0 +1,4 @@
+once int a was read().
+once int b was read().
+print(a).
+tell b.

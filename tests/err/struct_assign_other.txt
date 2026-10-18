@@ -1,0 +1,11 @@
+struct Q:
+  once changing int z.
+end.
+struct P:
+  once changing int x.
+  once int y.
+end.
+once changing P p was make P(1, 2).
+once Q q was make Q(1).
+p became q.
+tell 1.

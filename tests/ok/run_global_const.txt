@@ -1,0 +1,7 @@
+task scaled(int v) giving int:
+  once int r was v * factor.
+  give r.
+end.
+always int factor is 3.
+print(scaled(4)).
+tell scaled(5).

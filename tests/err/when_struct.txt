@@ -1,0 +1,9 @@
+struct P:
+  once changing int x.
+  once int y.
+end.
+once P p was make P(1, 2).
+when p:
+  print("x").
+end.
+tell 1.

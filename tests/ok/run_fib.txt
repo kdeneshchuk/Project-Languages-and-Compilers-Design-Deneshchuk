@@ -1,0 +1,13 @@
+task fib(int n) giving int:
+  when n equals 0:
+    give 0.
+  end.
+  when n equals 1:
+    give 1.
+  end.
+  once int a was fib(n - 1).
+  once int b was fib(n - 2).
+  once int r was a + b.
+  give r.
+end.
+tell fib(15).

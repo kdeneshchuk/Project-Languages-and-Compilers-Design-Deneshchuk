@@ -1,0 +1,7 @@
+struct P:
+  once int x.
+  once int y.
+end.
+once P p was make P(read(), read()).
+print(p).
+tell y of p.

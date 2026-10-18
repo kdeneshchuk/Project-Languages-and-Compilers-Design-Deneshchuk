@@ -1,0 +1,14 @@
+struct In:
+  once changing int v.
+  task inc() giving int:
+    v became v + 1.
+    give v.
+  end.
+end.
+struct Out:
+  once changing In inner.
+end.
+once changing Out o was make Out(make In(5)).
+once int r was inc() of inner of o.
+print(r).
+tell v of inner of o.

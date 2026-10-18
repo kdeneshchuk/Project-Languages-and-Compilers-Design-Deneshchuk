@@ -1,0 +1,15 @@
+task twice(long v) giving long:
+  once long r was v + v.
+  give r.
+end.
+task add(int a, int b) giving int:
+  once int s was a + b.
+  give s.
+end.
+task combine(int a) giving long:
+  once long left was twice(add(a, 1)).
+  once long right was twice(a).
+  once long both was left + right.
+  give both.
+end.
+tell combine(10).

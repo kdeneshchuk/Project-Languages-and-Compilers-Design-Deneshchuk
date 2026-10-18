@@ -1,0 +1,2 @@
+once flag a was yes.
+tell x of a.

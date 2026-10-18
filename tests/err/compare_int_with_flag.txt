@@ -1,0 +1,3 @@
+once flag a was yes.
+once flag c was a equals 1.
+tell a.

@@ -1,0 +1,6 @@
+struct P:
+  once changing int x.
+  once int y.
+end.
+once int P was 1.
+tell P.

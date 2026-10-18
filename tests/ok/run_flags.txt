@@ -1,0 +1,6 @@
+once flag a was yes.
+once flag b was 3 equals 4.
+print(a).
+print(b).
+print(a differs b).
+tell b.

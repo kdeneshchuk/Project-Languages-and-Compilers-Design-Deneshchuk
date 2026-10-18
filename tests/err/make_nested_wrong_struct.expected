@@ -1,0 +1,1 @@
+compilation error: line 11:21: cannot initialise field 'q' of type Q with a value of type P

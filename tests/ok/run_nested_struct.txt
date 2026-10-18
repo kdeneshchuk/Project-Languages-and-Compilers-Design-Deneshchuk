@@ -1,0 +1,13 @@
+struct Point:
+  once changing int x.
+  once changing int y.
+end.
+struct Circle:
+  once Point center.
+  once int radius.
+end.
+once changing Circle c was make Circle(make Point(1, 2), 5).
+print(x of center of c).
+print(radius of c).
+print(c).
+tell y of center of c.
