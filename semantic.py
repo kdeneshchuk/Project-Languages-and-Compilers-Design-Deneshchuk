@@ -118,6 +118,17 @@ class SemanticChecker:
             t = field.type_name
         return symbol, links, path, t
 
+    def const_field(self, struct_name):
+        """The first field, at any depth, that is not 'once changing': its names from the outside in."""
+        for f in self.structs[struct_name].fields:
+            if not f.mutable:
+                return [f.name]
+            if f.type_name in self.structs:
+                inner = self.const_field(f.type_name)
+                if inner is not None:
+                    return [f.name] + inner
+        return None
+
     # ---------- collecting: before any body is checked ----------
 
     def collect_top_level(self, statements):
@@ -211,19 +222,26 @@ class SemanticChecker:
         self.declare(node, node.symbol)
 
     def visit_AssignNode(self, node):
-        if len(node.names) > 1:
-            self.fail(node, "this construct is not supported yet")
-        name = node.names[0]
-        symbol = self.lookup(name)
-        if symbol is None:
-            self.unknown(node, name)
+        symbol, links, path, target = self.resolve_chain(node.names, node.positions)
+        full = " of ".join(node.names)
         if not symbol.mutable:
-            self.fail(node, f"cannot assign to '{name}': it is not 'once changing'")
-        if symbol.type_name in self.structs:
-            self.fail(node, "this construct is not supported yet")
+            if len(node.names) == 1:
+                self.fail(node, f"cannot assign to '{full}': it is not 'once changing'")
+            self.fail(At(node.positions[-1]),
+                      f"cannot assign to '{full}': '{symbol.name}' is not 'once changing'")
+        for k, field in enumerate(links):       # from the variable outwards
+            if not field.mutable:
+                where = At(node.positions[len(node.names) - 2 - k])
+                self.fail(where, f"cannot assign to '{full}': "
+                                 f"field '{field.name}' is not 'once changing'")
         self.visit(node.value)
-        self.check_assignable(node.value, symbol.type_name, node, f"assign to '{name}'")
-        node.symbol = symbol
+        self.check_assignable(node.value, target, node, f"assign to '{full}'")
+        if target in self.structs:
+            const_path = self.const_field(target)
+            if const_path is not None:
+                shown = " of ".join(reversed(const_path))
+                self.fail(node, f"cannot assign to '{full}': field '{shown}' is not 'once changing'")
+        node.symbol, node.path, node.target = symbol, path, target
 
     def visit_WhenNode(self, node):
         cond_type = self.visit(node.cond)

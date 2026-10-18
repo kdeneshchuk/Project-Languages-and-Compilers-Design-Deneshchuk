@@ -140,9 +140,9 @@ class CodeGen:
         self.builder.store(value, node.symbol.ptr)
 
     def visit_AssignNode(self, node):
-        symbol = node.symbol
-        value = self.coerce(self.visit(node.value), node.value.type, symbol.type_name)
-        self.builder.store(value, symbol.ptr)
+        value = self.coerce(self.visit(node.value), node.value.type, node.target)
+        ptr = self.address_of(node.symbol.ptr, node.path)
+        self.builder.store(value, ptr)
 
     def visit_WhenNode(self, node):
         cond = self.visit(node.cond)
