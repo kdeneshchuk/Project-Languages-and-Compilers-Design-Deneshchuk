@@ -334,6 +334,24 @@ class SemanticChecker:
         if node.else_block is not None:
             self.visit(node.else_block)
 
+    def visit_WhileNode(self, node):
+        cond_type = self.visit(node.cond)
+        if cond_type != "flag":
+            self.fail(node, f"the condition of 'while' must be a flag, got {cond_type}")
+        self.visit(node.body)
+
+    def visit_ForNode(self, node):
+        # the bounds are checked before the loop variable exists: they see the outer names
+        for bound, word in ((node.start, "from"), (node.end, "to")):
+            bound_type = self.visit(bound)
+            if bound_type != "int":
+                self.fail(bound, f"the bound after '{word}' must be int, got {bound_type}")
+        self.check_not_struct(At(node.name_pos), node.name)
+        node.symbol = Symbol(node.name, "int", False, "var")
+        self.scopes.append({node.name: node.symbol})    # a frame for the loop variable only
+        self.visit(node.body)                           # the body pushes its own frame on top
+        self.scopes.pop()
+
     def visit_GiveNode(self, node):
         task = self.current_task
         value_type = self.visit(node.value)
