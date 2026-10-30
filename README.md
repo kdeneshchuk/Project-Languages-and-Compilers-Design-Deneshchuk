@@ -5,10 +5,12 @@ sequence of sentences; every sentence ends with a full stop. Words carry the
 meaning instead of symbols: a variable *was* something once, and later it
 *became* something else.
 
-This repository is stage 2 of the CS400 course project. Stage 1 gave the
-language a lexer, a parser and an AST. Stage 2 makes it run: tasks
+This repository is stage 3 of the CS400 course project. Stage 1 gave the
+language a lexer, a parser and an AST. Stage 2 made it run: tasks
 (functions), structs with fields and member functions, `read` and `print`, a
-semantic pass and code generation to LLVM IR through `llvmlite`.
+semantic pass and code generation to LLVM IR through `llvmlite`. Stage 3 adds
+one feature of its own: loops, `while` and `for` over an integer range (see
+[Loops](#loops)).
 
 ```
 always int LEGAL_AGE is 18.
@@ -106,7 +108,8 @@ once flag r was 👍.
 
 `when` takes a condition, a colon and a block; `otherwise` and its block are
 optional; `end.` closes the sentence. Each block holds at least one statement,
-and conditions can be nested, up to 100 levels deep.
+and conditions can be nested, up to 100 levels deep (the limit is shared
+with loops, see Loops).
 
 ```
 when score 🟰 100:
@@ -115,6 +118,77 @@ when score 🟰 100:
 otherwise:
     ready became no.
 end.
+```
+
+### Loops
+
+`while` repeats a block as long as a condition is true. `for` repeats a block
+once for every integer from a first value to a last one.
+
+```
+while i differs 6:
+    ...
+end.
+
+for n from 1 to 5:
+    ...
+end.
+```
+
+The rules:
+
+1. The condition of `while` is a `flag`. It is tested before every turn, so a
+   `while` whose condition is false at the start does not run at all, and a
+   `read()` in the condition is evaluated on every turn.
+2. `for n from A to B` takes two `int` expressions. Both are evaluated once,
+   from left to right, before the first turn, and they see the names declared
+   outside the loop. Changing a variable inside the body does not change the
+   bounds.
+3. The bounds are inclusive: `for n from 1 to 5` runs for 1, 2, 3, 4 and 5. When
+   `A` is greater than `B` the body does not run at all. The loop also works
+   with `to 2147483647`: it stops when the variable is equal to `B`, before an
+   increment that would overflow.
+4. The variable of a `for` is an `int`, is not `once changing`, and is visible
+   only in the body of the loop. It cannot be assigned, and after `end.` the name
+   is free again. The bounds are checked before the variable exists, so
+   `for n from n to 3` reads an `n` declared outside. A declaration in the body
+   may reuse the name and hides the loop variable.
+5. A body holds at least one statement and ends with `end.`. A variable
+   declared in the body belongs to that body: it is created again, with its
+   initial value, on every turn.
+6. A loop is a statement. It stands wherever a statement can: at the top level,
+   in a task or a member function, in the block of a `when`, in another loop.
+   `give` inside a loop of a task leaves the task at once. `tell` stays the
+   last statement of the program and cannot stand inside a loop.
+7. `when`, `while` and `for` share one limit: together they nest at most 100
+   levels deep.
+8. `while`, `for`, `from` and `to` are reserved words.
+
+Example 1: `while` with a counter. It prints 15 and reports 6.
+
+```
+once changing int i was 1.
+once changing int sum was 0.
+while i differs 6:
+    sum became sum + i.
+    i became i + 1.
+end.
+print(sum).
+tell i.
+```
+
+Example 2: a loop inside a loop. The inner loop declares a variable, and the
+program reports 36, the sum of `a * b` for all pairs from 1 to 3.
+
+```
+once changing int total was 0.
+for a from 1 to 3:
+    for b from 1 to 3:
+        once int p was a * b.
+        total became total + p.
+    end.
+end.
+tell total.
 ```
 
 ### Reporting the result and ending the program
@@ -134,7 +208,8 @@ tell score.
 
 `always`, `once`, `changing`, `is`, `was`, `became`, `when`, `otherwise`,
 `end`, `tell`, `int`, `long`, `flag`, `equals`, `differs`, `yes`, `no`,
-`struct`, `task`, `giving`, `give`, `of`, `make`, `print`, `read`.
+`struct`, `task`, `giving`, `give`, `of`, `make`, `print`, `read`,
+`while`, `for`, `from`, `to`.
 
 Names are letters, digits and `_`, and may not start with a digit. Keywords
 are case-sensitive, so `Tell` and `YES` are ordinary names.
@@ -144,7 +219,8 @@ are case-sensitive, so `Tell` and `YES` are ordinary names.
 Division, `<`, `>`, a lone `=` or `!`, `{`, `}`, `;`, a sign in front of a
 number (write `0 - 5`), two comparisons in one expression, anything after
 `tell`, comments, grouping parentheses (`(1 + 2)`), a task or a struct
-inside a task, and two tasks with one name. Parentheses exist only in a call,
+inside a task, two tasks with one name, `break`, a step other than 1 in a
+`for`, and a loop variable of a type other than `int`. Parentheses exist only in a call,
 in `make`, in `read()` and in `print(...)`. Each of the above is a
 compilation error.
 
@@ -182,6 +258,8 @@ at that line.
 
 1. Every block of a `when` is a scope of its own: the block after `:` and
    the block after `otherwise:` are two scopes. A task body is a scope too.
+   The body of a loop is a scope too, and the variable of a `for` lives in a
+   scope of its own around the body.
 2. A declaration goes into the innermost scope. The same name cannot be
    declared twice in one scope, the body of a task included.
 3. An inner scope may declare a name that an outer one has, with any type;
@@ -442,6 +520,42 @@ compiler writes is `str(module)`.
   printed with no new compiler code. The final `Program exit with result N` 
   is written by `main` at `tell`.
 
+### Loops in the IR
+
+A `while` becomes three basic blocks: `while.cond`, `while.body` and
+`while.end`. This is the IR of `while i differs 4:` with the body
+`i became i + 1.`:
+
+```
+entry:
+  %"i" = alloca i32
+  store i32 1, i32* %"i"
+  br label %"while.cond"
+while.cond:
+  %".4" = load i32, i32* %"i"
+  %".5" = icmp ne i32 %".4", 4
+  br i1 %".5", label %"while.body", label %"while.end"
+while.body:
+  %".7" = load i32, i32* %"i"
+  %".8" = add i32 %".7", 1
+  store i32 %".8", i32* %"i"
+  br label %"while.cond"
+while.end:
+```
+
+`while.cond` loads `i`, compares it with 4 using `icmp ne` and branches to
+`while.body` or `while.end`, so the condition is tested again on every turn.
+`while.body` loads `i`, adds 1 and stores it back, and its last instruction,
+`br label %"while.cond"`, is the back edge: the only jump that goes to a block
+that has already run. The slot of `i` is allocated once in `entry`, outside the
+loop, and `while.end` is where the statements after `end.` go on.
+
+A `for` has the blocks `for.body`, `for.step` and `for.end`. Both bounds are
+computed once before the loop, and a first comparison skips the body when the
+range is empty. At the end of the body the variable is compared with the last
+value *before* it is incremented, so a loop that ends at 2147483647 does not
+overflow; `for.step` adds 1 and branches back to `for.body`.
+
 ## Setup
 
 Python 3.10 or newer, the `llvmlite` package, and the LLVM tools `lli`, `llc`
@@ -524,6 +638,10 @@ with a non-zero code if any did.
 
 Every rule in this README is covered by one program that follows it and one
 that breaks it, and the tests are named after the rule they cover.
+The tests of the loops are named `loop_*`: `tests/ok/loop_*` run loops end to
+end, including the edge cases (an empty range, a bound of 2147483647, nested
+loops, a loop inside a task and a member function), and `tests/err/loop_*`
+break each rule of Loops.
 
 ## VS Code extension (optional)
 

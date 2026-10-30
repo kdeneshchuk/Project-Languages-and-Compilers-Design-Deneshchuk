@@ -5,8 +5,8 @@
 
 program      ::= { struct_decl } { task_decl } { statement } tell_stmt
 
-while_stmt   ::= "while" expr ":" block "end" "."
-for_stmt     ::= "for" ident "from" expr "to" expr ":" block "end" "."
+statement    ::= const_decl | var_decl | assign | when_stmt
+               | while_stmt | for_stmt | print_stmt | give_stmt
 
 (* ---------- structures ---------- *)
 
@@ -117,8 +117,8 @@ digit        ::= "0" .. "9"
        int  : 0 .. 2147483647
        long : 0 .. 9223372036854775807
      there is no sign, so a literal is never negative;
-  - "when", "while" and "for" blocks may be nested at most 100 levels deep
-    (one shared counter);            *)
+   - "when", "while" and "for" blocks may be nested at most 100 levels
+     deep (one shared counter).                                       *)
 
 (* Done by the parser (stage 2):
    - program order: structs, then tasks, then statements, then "tell";
@@ -151,6 +151,10 @@ digit        ::= "0" .. "9"
    - structs: a value for every field of "make", fields of known types,
      no struct inside itself, every link of an access exists, a write
      needs every link to be "once changing";
+   - loops: the condition of "while" is a "flag"; both bounds of "for"
+     are "int" and are checked before the loop variable exists; the
+     loop variable is an "int", is not "once changing" and lives only
+     in the body of its loop;
    - member functions: names looked up among parameters and locals,
      then fields, then global constants; a member function that assigns
      a field (directly or through another member function) may be
