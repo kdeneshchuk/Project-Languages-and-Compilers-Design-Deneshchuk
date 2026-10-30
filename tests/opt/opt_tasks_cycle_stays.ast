@@ -1,0 +1,39 @@
+Program
+  Task even -> flag
+    Param n int
+    Block
+      When
+        BinOp ==
+          Var n
+          Number 0
+        Then
+          Give
+            Bool true
+      VarDecl e flag const
+        Call odd
+          BinOp -
+            Var n
+            Number 1
+      Give
+        Var e
+  Task odd -> flag
+    Param n int
+    Block
+      When
+        BinOp ==
+          Var n
+          Number 0
+        Then
+          Give
+            Bool false
+      VarDecl o flag const
+        Call even
+          BinOp -
+            Var n
+            Number 1
+      Give
+        Var o
+  Print
+    String "cycle"
+  Tell
+    Number 0

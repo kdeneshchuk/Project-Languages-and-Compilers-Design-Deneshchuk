@@ -1,0 +1,7 @@
+Program
+  VarDecl z int const
+    Number 15
+  Print
+    Var z
+  Tell
+    Var z

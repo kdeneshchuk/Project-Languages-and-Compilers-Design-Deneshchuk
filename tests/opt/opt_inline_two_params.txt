@@ -1,0 +1,8 @@
+task area(int w, int h) giving int:
+    once int a was w * h.
+    give a.
+end.
+
+once int room was area(3, 4).
+print(room).
+tell room.

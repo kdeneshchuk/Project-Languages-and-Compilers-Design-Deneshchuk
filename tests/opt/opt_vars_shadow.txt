@@ -1,0 +1,8 @@
+once changing int r was 0.
+once int x was 1.
+when yes:
+    once int x was 10.
+    r became x.
+end.
+print(r).
+tell r.

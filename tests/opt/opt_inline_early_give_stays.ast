@@ -1,0 +1,16 @@
+Program
+  Task early -> int
+    Param a int
+    Block
+      When
+        BinOp ==
+          Var a
+          Number 0
+        Then
+          Give
+            Number 5
+      Give
+        Var a
+  Tell
+    Call early
+      Number 0

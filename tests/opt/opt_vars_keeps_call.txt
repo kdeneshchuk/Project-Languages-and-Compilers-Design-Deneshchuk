@@ -1,0 +1,9 @@
+task loud(int a) giving int:
+    print(a).
+    give a.
+end.
+
+once int first was loud(7).
+once int second was loud(8).
+once int dead was 3.
+tell 0.

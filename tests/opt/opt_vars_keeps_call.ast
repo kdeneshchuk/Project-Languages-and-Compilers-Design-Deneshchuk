@@ -1,0 +1,16 @@
+Program
+  Task loud -> int
+    Param a int
+    Block
+      Print
+        Var a
+      Give
+        Var a
+  VarDecl first int const
+    Call loud
+      Number 7
+  VarDecl second int const
+    Call loud
+      Number 8
+  Tell
+    Number 0

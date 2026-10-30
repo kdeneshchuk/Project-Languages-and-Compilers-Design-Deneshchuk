@@ -1,0 +1,15 @@
+Program
+  VarDecl area.w int const
+    Number 3
+  VarDecl area.h int const
+    Number 4
+  VarDecl area.a int const
+    BinOp *
+      Var area.w
+      Var area.h
+  VarDecl room int const
+    Var area.a
+  Print
+    Var room
+  Tell
+    Var room

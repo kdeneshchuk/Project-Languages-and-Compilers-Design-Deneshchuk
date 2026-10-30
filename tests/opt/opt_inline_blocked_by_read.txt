@@ -1,0 +1,8 @@
+task add1(int a) giving int:
+    once int s was a + 1.
+    give s.
+end.
+
+once int q was read() + add1(1).
+print(q).
+tell q.

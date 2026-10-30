@@ -1,0 +1,18 @@
+task even(int n) giving flag:
+    when n equals 0:
+        give yes.
+    end.
+    once flag e was odd(n - 1).
+    give e.
+end.
+
+task odd(int n) giving flag:
+    when n equals 0:
+        give no.
+    end.
+    once flag o was even(n - 1).
+    give o.
+end.
+
+print("cycle").
+tell 0.

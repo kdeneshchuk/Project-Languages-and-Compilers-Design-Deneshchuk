@@ -129,6 +129,35 @@ def check_program(session_path):
             return f"output differs\n      expected: {expected!r}\n      got:      {got!r}"
     return None
 
+def check_opt(name_path):
+    """tests/opt/NAME.txt: the tree after --optimize, and the same output with and without the flag."""
+    expected_tree = read_text(name_path + ".ast")
+    got = run([sys.executable, COMPILER, "--optimize", "--ast", name_path + ".txt"])
+    if got.returncode != 0:
+        return f"--optimize --ast failed: {got.stderr.decode('utf-8', 'replace').strip()}"
+    if got.stdout.decode("utf-8") != expected_tree:
+        return "the tree after --optimize differs from the .ast file"
+    stdin = b""
+    if os.path.exists(name_path + ".in"):
+        with open(name_path + ".in", "rb") as f:
+            stdin = f.read()
+    expected = read_text(name_path + ".expected")
+    for flags in ([], ["--optimize"]):
+        with tempfile.TemporaryDirectory() as tmp:
+            ll = os.path.join(tmp, "out.ll")
+            built = run([sys.executable, COMPILER] + flags + [name_path + ".txt", ll])
+            if built.returncode != 0:
+                return f"does not compile with {flags or 'no flag'}: " \
+                       f"{built.stderr.decode('utf-8', 'replace').strip()}"
+            done = execute(ll, tmp, stdin)
+            if done.returncode != 0:
+                return f"the run failed with {flags or 'no flag'} (code {done.returncode})"
+            output = done.stdout.decode("utf-8", "replace")
+            if output != expected:
+                return f"output differs with {flags or 'no flag'}\n" \
+                       f"      expected: {expected!r}\n      got:      {output!r}"
+    return None    
+
 def main():
     failed = []
     counts = {"valid": 0, "invalid": 0, "end to end": 0}
@@ -166,6 +195,12 @@ def main():
         counts["valid"] += 1
         counts["end to end"] += 1
         report("prog", os.path.basename(base), check_program(base))
+
+    for src in sorted(glob.glob(os.path.join(ROOT, "tests", "opt", "*.txt"))):
+        base = src[:-4]
+        counts["valid"] += 1
+        counts["end to end"] += 1
+        report("opt", os.path.basename(base), check_opt(base))
 
     total = counts["valid"] + counts["invalid"]
     print(f"\n{total - len(failed)}/{total} passed "

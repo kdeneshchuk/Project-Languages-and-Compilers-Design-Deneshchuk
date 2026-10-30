@@ -1,0 +1,5 @@
+once int x was 10.
+once int y was x.
+once int z was 15.
+print(z).
+tell z.
