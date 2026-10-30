@@ -592,6 +592,7 @@ source .venv/bin/activate                  # once per terminal
 python3 compiler.py input.txt output.ll    # compile
 python3 compiler.py --ast input.txt        # print the AST, write nothing
 python3 compiler.py --tokens input.txt     # print the token stream
+python3 compiler.py --optimize input.txt output.ll   # the same, with the optimizer
 lli output.ll < input.in                   # run, a program that calls read()
 llc -filetype=obj -relocation-model=pic output.ll -o output.o
 clang -fPIE output.o -o program && ./program
@@ -648,6 +649,10 @@ break each rule of Loops.
 The recorded sessions of `programs/` are run by the same script, as native
 binaries built with `llc` and `clang`, and they appear in the output as `prog`.
 
+The tests of the optimizer are in `tests/opt/` and appear in the output as `opt`.
+`python3 run_tests.py --optimize` compiles every other test, and the sessions of
+the game, with the optimizer.
+
 ## A real program: the guessing game
 
 `programs/guess.txt` is a game for two players, played in turns at one
@@ -686,6 +691,88 @@ user types and `NAME.expected` is the exact output, prompts included.
 sessions with their `.expected` files. A session is named `guess_<what>`: the
 part before the first `_` is the program it runs.
 
+## The optimizer
+
+`python3 compiler.py --optimize input.txt output.ll` runs three transformations
+of the checked tree before code generation, until a round changes nothing. The
+flag may stand anywhere on the command line, and `--optimize --ast` prints the
+tree after the optimizer. Without the flag the compiler works as before. A
+program prints the same with the flag and without it.
+
+1. **Unused variables.** A declaration that nothing reads is removed together
+   with the assignments to it. Reads are counted per declaration, not per name,
+   so a name in an inner block and the same name outside are two different
+   variables. A declaration whose value contains a call or `read()` is never
+   removed, and neither is an assignment with such a value. Parameters, fields
+   and loop variables are not touched. A variable that is read only by its own
+   assignment, such as `k became k + 1.`, stays: the right side reads it.
+2. **Unused tasks.** A task that nothing calls is removed with its body, and
+   removing it may leave another task without calls. Member functions are not
+   removed. Two tasks that only call each other stay, because each one has a
+   call.
+3. **Inlining.** A task that is called exactly once and is not recursive,
+   directly or through other tasks, is replaced at its call. Each parameter
+   becomes a declaration `once T task.param was <argument>.` before the
+   statement with the call, the body goes after the declarations, and the call
+   is replaced by the value of the last `give`. Every name from the task gets
+   the prefix `task.`, which a name written in a program cannot have, so it
+   cannot meet a name of the caller. The task is then removed as unused.
+
+What is inlined, and what is left alone:
+
+| Case | Result |
+|---|---|
+| the call stands in a declaration, an assignment, `tell`, `print`, `give`, the condition of `when` or a bound of `for` | inlined |
+| the body has `give` only as its last statement | inlined |
+| the body leaves with `give` inside `when` or a loop | left alone |
+| the call stands in the condition of `while` | left alone: the condition runs on every turn, the inlined body would run once |
+| the same statement has another call or `read()` | left alone: moving the body would change the order of effects |
+| the value of the last `give` has another type than the result (an `int` given as `long`) | left alone |
+| the task calls itself, directly or through other tasks | left alone |
+| member functions | left alone |
+
+The tests are in `tests/opt/`: each program has the tree after
+`--optimize --ast` (`NAME.ast`) and the expected output (`NAME.expected`), and
+the runner checks that the output is the same with and without the flag.
+`python3 run_tests.py --optimize` runs every other test, and the recorded
+sessions of the game, with the flag.
+
+### Inlining in the IR: `points` of the game
+
+In `programs/guess.txt` the task `points` is called once, in `total became total + points(attempts of g).`.
+Without the flag the call is a `call` of a separate function (`fn.points`, defined after `main`):
+
+```
+  %".54" = getelementptr inbounds %"Game", %"Game"* %"g", i32 0, i32 1
+  %".55" = load i32, i32* %".54"
+  %".56" = call i32 @"fn.points"(i32 %".55")
+  %".57" = add i32 %".53", %".56"
+  store i32 %".57", i32* %"total"
+```
+
+With `--optimize` the module has no `fn.points` any more, and the same place in `main` holds its body:
+
+```
+  %".53" = getelementptr inbounds %"Game", %"Game"* %"g", i32 0, i32 1
+  %".54" = load i32, i32* %".53"
+  store i32 %".54", i32* %"points.attempts"
+  %".56" = add i32 7, 1
+  %".57" = load i32, i32* %"points.attempts"
+  %".58" = sub i32 %".56", %".57"
+  store i32 %".58", i32* %"points.p"
+  %".60" = load i32, i32* %"total"
+  %".61" = load i32, i32* %"points.p"
+  %".62" = add i32 %".60", %".61"
+  store i32 %".62", i32* %"total"
+```
+
+The argument `attempts of g` is loaded and stored into the slot `points.attempts`, which is
+the parameter turned into a declaration. The next three instructions are the body of the
+task: `MAX_ATTEMPTS + 1` (a constant, 7 + 1), the load of the parameter, and the subtraction,
+stored into `points.p`. The last four add `points.p` to `total`: the value of `give p` stands
+where the call stood. The two slots, `points.attempts` and `points.p`, are `alloca`
+instructions at the start of `main`, so their names show where each one came from.
+
 ## VS Code extension (optional)
 
 `vscode-telly/` supports files with the extension `.telly`, or any file whose
@@ -723,6 +810,7 @@ reload the window.
 | `codegen.py` | code generation through the `llvmlite` builder |
 | `compiler.py` | the command line |
 | `run_tests.py` | the test runner |
+| `optimizer.py` | the optimizer behind `--optimize`: unused variables, unused tasks, inlining |
 | `programs/` | the real program, `guess.txt`, and its recorded sessions (`.in` and `.expected`) |
 | `vscode-telly/` | an optional [VS Code extension](#vs-code-extension-optional): highlighting, snippets, 👍 👎 🟰 🚫 completions and the compiler's errors under the code |
 
