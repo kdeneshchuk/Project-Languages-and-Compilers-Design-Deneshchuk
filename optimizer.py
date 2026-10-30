@@ -142,6 +142,133 @@ def inline_candidates(tree):
             and id(t) not in recursive
             and not has_early_give(t.body)]
 
+STATEMENT_FIELDS = {
+    # the expressions of a statement that are evaluated once, right where it stands
+    VarDeclNode: ("init",), AssignNode: ("value",), TellNode: ("value",),
+    GiveNode: ("value",), PrintNode: ("value",), WhenNode: ("cond",),
+    ForNode: ("start", "end"),
+}                                       # a while is left out: its condition runs on every turn
+
+
+def find_call(node, task):
+    """The one call of this task below a node, or None."""
+    if isinstance(node, CallNode) and node.task is task:
+        return node
+    for child in node.children():
+        found = find_call(child, task)
+        if found is not None:
+            return found
+    return None
+
+
+def effects_outside(node, call):
+    """Calls and read() in this expression, not counting the call that is being inlined."""
+    if node is call:
+        return 0
+    own = 1 if isinstance(node, (CallNode, MemberCallNode, ReadNode)) else 0
+    return own + sum(effects_outside(child, call) for child in node.children())
+
+
+def replace_in(node, target, new):
+    """The expression with `target` replaced by `new`."""
+    if node is target:
+        return new
+    if isinstance(node, BinOpNode):
+        node.left = replace_in(node.left, target, new)
+        node.right = replace_in(node.right, target, new)
+    elif isinstance(node, (CallNode, MakeNode, MemberCallNode)):
+        node.args = [replace_in(a, target, new) for a in node.args]
+    return node
+
+
+def rename_for_inlining(task, moved):
+    """Parameters and locals of the inlined body get names the caller cannot have, in every
+    declaration and every read of them. A dot cannot stand in a name of the program."""
+    names = {id(p.symbol): f"{task.name}.{p.name}" for p in task.params}
+
+    def collect(node):
+        if isinstance(node, (VarDeclNode, ConstDeclNode, ForNode)):
+            names[id(node.symbol)] = f"{task.name}.{node.name}"
+        for child in node.children():
+            collect(child)
+
+    def apply(node):
+        if isinstance(node, (VarDeclNode, ConstDeclNode, ForNode)):
+            node.name = names[id(node.symbol)]
+            node.symbol.name = node.name
+        elif isinstance(node, (VarNode, FieldNode, AssignNode, MemberCallNode)):
+            symbol = getattr(node, "symbol", None)
+            if symbol is not None and id(symbol) in names:
+                if isinstance(node, VarNode):
+                    node.name = names[id(symbol)]
+                elif isinstance(node, MemberCallNode):
+                    node.obj[-1] = names[id(symbol)]
+                else:
+                    node.names[-1] = names[id(symbol)]
+        for child in node.children():
+            apply(child)
+
+    for node in moved:
+        collect(node)
+    for p in task.params:
+        p.symbol.name = names[id(p.symbol)]
+    for node in moved:
+        apply(node)
+
+
+def inline_call(statements, index, task):
+    """Inline `task` into statements[index], when its call stands in an expression that is
+    evaluated once and nothing else in that statement has an effect. True when done."""
+    stmt = statements[index]
+    fields = STATEMENT_FIELDS.get(type(stmt), ())
+    exprs = [getattr(stmt, f) for f in fields]
+    call = next((c for c in (find_call(e, task) for e in exprs) if c is not None), None)
+    if call is None:
+        return False
+    if sum(effects_outside(e, call) for e in exprs) > 0:
+        return False                                    # moving the body would reorder effects
+    body = task.body.statements
+    give = body[-1]
+    if give.value.type != task.result_type:
+        return False                                    # a widening that the generator decides
+    prefix = []
+    for param, arg in zip(task.params, call.args):
+        decl = VarDeclNode(param.line, param.col, f"{task.name}.{param.name}",
+                           param.type_name, False, arg)
+        decl.symbol = param.symbol                      # the reads in the body already point here
+        prefix.append(decl)
+    moved = body[:-1] + [give.value]
+    rename_for_inlining(task, moved)
+    prefix.extend(body[:-1])
+    for field, expr in zip(fields, exprs):
+        setattr(stmt, field, replace_in(expr, call, give.value))
+    statements[index:index + 1] = prefix + [stmt]
+    return True
+
+def inline_into_tell(tree, task):
+    """The final tell is not in any list of statements: treat it as the last one of the program."""
+    holder = tree.statements + [tree.tell]
+    if not inline_call(holder, len(holder) - 1, task):
+        return False
+    tree.statements[:] = holder[:-1]
+    tree.tell = holder[-1]
+    return True
+
+def inline_one(tree):
+    """Inline the first candidate that has a safe place. True when something was inlined."""
+    for task in inline_candidates(tree):
+        placed = inline_into_tell(tree, task)
+        for statements in blocks_of(tree):
+            if placed:
+                break
+            for index in range(len(statements)):
+                if inline_call(statements, index, task):
+                    placed = True
+                    break
+        if placed:
+            tree.tasks[:] = [t for t in tree.tasks if t is not task]
+            return True
+    return False
 
 def optimize(tree):
     """Run the transformations until a round changes nothing."""
@@ -149,12 +276,5 @@ def optimize(tree):
     while changed:
         changed = remove_unused_variables(tree)
         changed = remove_unused_tasks(tree) or changed
+        changed = inline_one(tree) or changed
     return tree
-
-def debug_report(tree):
-    names = lambda ts: sorted(t.name for t in ts)
-    counts = {}
-    count_calls(tree, counts)
-    print("calls:", {t.name: counts.get(id(t), 0) for t in tree.tasks})
-    print("recursive:", names(t for t in tree.tasks if id(t) in recursive_tasks(tree)))
-    print("candidates:", names(inline_candidates(tree)))
