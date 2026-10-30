@@ -1,0 +1,32 @@
+Number guessing game
+How many rounds?
+Round
+1
+Player one, enter the secret number (1-100):
+Player two, your guess:
+Too low.
+Player two, your guess:
+Too high.
+Player two, your guess:
+Correct!
+Round
+2
+Player one, enter the secret number (1-100):
+Player two, your guess:
+Too low.
+Player two, your guess:
+Too low.
+Player two, your guess:
+Too low.
+Player two, your guess:
+Too low.
+Player two, your guess:
+Too low.
+Player two, your guess:
+Too low.
+Player two, your guess:
+Too low.
+Out of attempts.
+Total score:
+5
+Program exit with result 5

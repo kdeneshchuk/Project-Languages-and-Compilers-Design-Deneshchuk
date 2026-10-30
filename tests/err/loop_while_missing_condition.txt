@@ -1,0 +1,4 @@
+while:
+    print(1).
+end.
+tell 0.

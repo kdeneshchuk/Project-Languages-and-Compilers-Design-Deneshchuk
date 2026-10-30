@@ -1,0 +1,11 @@
+Program
+  For n
+    Number 1
+    Number 5
+    Body
+      Print
+        BinOp *
+          Var n
+          Var n
+  Tell
+    Number 0

@@ -1,0 +1,14 @@
+struct Point:
+  once changing int x.
+  once int y.
+  task bump() giving int:
+    x became x + 1.
+    give x.
+  end.
+  task look() giving int:
+    give y.
+  end.
+end.
+once Point p was make Point(1, 2).
+once int r was jump() of p.
+tell r.

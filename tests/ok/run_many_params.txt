@@ -1,0 +1,8 @@
+task f(int a, long b, flag c, int d) giving long:
+  when c:
+    once long r was b + a + d.
+    give r.
+  end.
+  give b.
+end.
+tell f(1, 2, yes, 4).

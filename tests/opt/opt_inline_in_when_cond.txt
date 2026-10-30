@@ -1,0 +1,12 @@
+task isBig(int a) giving flag:
+    once flag r was a equals 100.
+    give r.
+end.
+
+once int x was 100.
+when isBig(x):
+    print("big").
+otherwise:
+    print("small").
+end.
+tell x.

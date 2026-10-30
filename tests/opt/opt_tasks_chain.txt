@@ -1,0 +1,17 @@
+task twice(int a) giving int:
+    once int r was a + a.
+    give r.
+end.
+
+task helper(int a) giving int:
+    once int h was twice(a).
+    give h.
+end.
+
+task unused() giving int:
+    once int u was helper(1).
+    give u.
+end.
+
+print(twice(2)).
+tell twice(3).

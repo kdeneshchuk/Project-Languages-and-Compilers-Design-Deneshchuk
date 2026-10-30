@@ -1,0 +1,6 @@
+task add1(int a) giving int:
+    once int s was a + 1.
+    give s.
+end.
+
+tell add1(9).

@@ -1,0 +1,20 @@
+Program
+  Struct Counter
+    Member n int mut
+    MemberTask bump -> int
+      Block
+        Assign n
+          BinOp +
+            Var n
+            Number 1
+        Give
+          Var n
+  VarDecl c Counter mut
+    Make Counter
+      Number 0
+  VarDecl unused int const
+    MemberCall bump of c
+  Print
+    Var c
+  Tell
+    Number 0

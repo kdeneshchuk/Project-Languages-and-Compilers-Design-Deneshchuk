@@ -1,0 +1,10 @@
+once int a was read().
+once int b was read().
+print("sum:").
+print(a + b).
+when a equals 0:
+  print("zero").
+otherwise:
+  print("nonzero").
+end.
+tell b.

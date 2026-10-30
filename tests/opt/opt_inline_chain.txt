@@ -1,0 +1,11 @@
+task twice(int a) giving int:
+    once int r was a + a.
+    give r.
+end.
+
+task helper(int b) giving int:
+    once int h was twice(b) + 1.
+    give h.
+end.
+
+tell helper(5).

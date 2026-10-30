@@ -1,0 +1,12 @@
+struct Acc:
+    once changing int total.
+    task addUpTo(int limit) giving int:
+        for k from 1 to limit:
+            total became total + k.
+        end.
+        give total.
+    end.
+end.
+
+once changing Acc a was make Acc(0).
+tell addUpTo(4) of a.

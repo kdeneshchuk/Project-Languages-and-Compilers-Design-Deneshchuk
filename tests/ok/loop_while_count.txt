@@ -1,0 +1,8 @@
+once changing int i was 1.
+once changing int sum was 0.
+while i differs 6:
+    sum became sum + i.
+    i became i + 1.
+end.
+print(sum).
+tell i.

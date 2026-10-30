@@ -1,0 +1,16 @@
+Program
+  Task twice -> int
+    Param a int
+    Block
+      VarDecl r int const
+        BinOp +
+          Var a
+          Var a
+      Give
+        Var r
+  Print
+    Call twice
+      Number 2
+  Tell
+    Call twice
+      Number 3

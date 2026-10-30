@@ -18,5 +18,29 @@
       "end."
     ],
     "description": "when ... end. (without otherwise)"
+  },
+  "struct": {
+    "prefix": "struct",
+    "body": [
+      "struct ${1:Name}:",
+      "    once changing ${2:int} ${3:field}.",
+      "end."
+    ],
+    "description": "a struct with one field"
+  },
+  "task": {
+    "prefix": "task",
+    "body": [
+      "task ${1:name}(${2:int a}) giving ${3:int}:",
+      "    $4",
+      "    give ${5:a}.",
+      "end."
+    ],
+    "description": "a task (function) that gives a value"
+  },
+  "print": {
+    "prefix": "print",
+    "body": "print(${1:value}).",
+    "description": "print a value or a string"
   }
 }

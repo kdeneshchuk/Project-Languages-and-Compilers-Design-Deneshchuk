@@ -1,0 +1,9 @@
+Program
+  VarDecl add1.a int const
+    Number 9
+  VarDecl add1.s int const
+    BinOp +
+      Var add1.a
+      Number 1
+  Tell
+    Var add1.s

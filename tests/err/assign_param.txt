@@ -1,0 +1,5 @@
+task f(int a) giving int:
+  a became 2.
+  give a.
+end.
+tell f(1).

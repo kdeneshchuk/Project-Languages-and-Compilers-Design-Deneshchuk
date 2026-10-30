@@ -1,0 +1,9 @@
+struct C:
+  once changing int v.
+  task set(int v) giving int:
+    give v.
+  end.
+end.
+once changing C c was make C(3).
+print(set(9) of c).
+tell v of c.

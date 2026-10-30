@@ -1,0 +1,21 @@
+Program
+  VarDecl total int mut
+    Number 0
+  For n
+    Number 1
+    Number 3
+    Body
+      VarDecl inc.a int const
+        Var n
+      VarDecl inc.r int const
+        BinOp +
+          Var inc.a
+          Number 1
+      Assign total
+        BinOp +
+          Var total
+          Var inc.r
+  Print
+    Var total
+  Tell
+    Var total

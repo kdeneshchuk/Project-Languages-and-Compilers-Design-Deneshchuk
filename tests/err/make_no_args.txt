@@ -1,0 +1,6 @@
+struct P:
+  once changing int x.
+  once int y.
+end.
+once P p was make P().
+tell 1.

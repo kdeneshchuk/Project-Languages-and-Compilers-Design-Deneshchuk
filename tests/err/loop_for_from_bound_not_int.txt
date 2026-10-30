@@ -1,0 +1,5 @@
+once long big was 1.
+for n from big to 3:
+    print(n).
+end.
+tell 0.

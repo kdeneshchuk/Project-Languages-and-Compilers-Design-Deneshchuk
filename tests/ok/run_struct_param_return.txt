@@ -1,0 +1,15 @@
+struct P:
+  once changing int x.
+  once int y.
+end.
+task mk(int a) giving P:
+  once P p was make P(a, 2).
+  give p.
+end.
+task getx(P q) giving int:
+  give x of q.
+end.
+once P p was mk(7).
+print(getx(p)).
+print(mk(3)).
+tell x of p.

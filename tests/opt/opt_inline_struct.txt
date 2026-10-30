@@ -1,0 +1,14 @@
+struct Point:
+    once int x.
+    once int y.
+end.
+
+task shifted(Point p, int dx) giving Point:
+    once Point q was make Point(x of p + dx, y of p).
+    give q.
+end.
+
+once Point a was make Point(1, 2).
+once Point b was shifted(a, 10).
+print(b).
+tell x of b.

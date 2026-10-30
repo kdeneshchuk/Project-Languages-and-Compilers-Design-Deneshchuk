@@ -1,0 +1,2 @@
+once int read was 1.
+tell read.

@@ -1,0 +1,6 @@
+task unused() giving int:
+    give SECRET.
+end.
+
+always int SECRET is 42.
+tell 0.

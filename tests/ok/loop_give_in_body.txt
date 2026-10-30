@@ -1,0 +1,17 @@
+task first(int x) giving int:
+    while yes:
+        give x.
+    end.
+    give 0.
+end.
+
+task second() giving int:
+    for n from 7 to 9:
+        give n.
+    end.
+    give 0.
+end.
+
+print(first(5)).
+print(second()).
+tell 0.

@@ -1,0 +1,8 @@
+task loud(int a) giving int:
+    print(a).
+    give a.
+end.
+
+once changing int x was 0.
+x became loud(7).
+tell 0.

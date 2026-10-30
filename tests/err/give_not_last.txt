@@ -1,0 +1,5 @@
+task f() giving int:
+  give 1.
+  once int a was 2.
+end.
+tell f().

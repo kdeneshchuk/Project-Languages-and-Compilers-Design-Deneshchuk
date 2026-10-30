@@ -1,0 +1,7 @@
+struct A:
+  once int x.
+  task x() giving int:
+    give 1.
+  end.
+end.
+tell 1.

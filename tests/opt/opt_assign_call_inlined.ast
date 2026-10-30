@@ -1,0 +1,7 @@
+Program
+  VarDecl loud.a int const
+    Number 7
+  Print
+    Var loud.a
+  Tell
+    Number 0

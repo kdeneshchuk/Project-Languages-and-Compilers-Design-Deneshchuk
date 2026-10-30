@@ -1,0 +1,4 @@
+struct A:
+  once A next.
+end.
+tell 1.

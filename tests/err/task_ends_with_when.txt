@@ -1,0 +1,8 @@
+task sign(int n) giving int:
+  when n equals 0:
+    give 0.
+  otherwise:
+    give 1.
+  end.
+end.
+tell sign(1).

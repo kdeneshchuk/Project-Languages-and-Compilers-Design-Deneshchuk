@@ -1,0 +1,6 @@
+task f() giving int:
+  k became 2.
+  give k.
+end.
+always int k is 1.
+tell f().

@@ -1,0 +1,12 @@
+task find(int limit) giving int:
+    once changing int i was 1.
+    while i differs limit:
+        when i * i equals 49:
+            give i.
+        end.
+        i became i + 1.
+    end.
+    give 0.
+end.
+
+tell find(100).

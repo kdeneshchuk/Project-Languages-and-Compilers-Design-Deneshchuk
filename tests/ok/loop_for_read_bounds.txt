@@ -1,0 +1,4 @@
+for n from read() to read():
+    print(n).
+end.
+tell 0.

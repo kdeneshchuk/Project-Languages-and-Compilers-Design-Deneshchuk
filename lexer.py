@@ -6,11 +6,12 @@ class CompileError(Exception):
 
 
 class Token:
-    def __init__(self, kind, text, line, col):
+    def __init__(self, kind, text, line, col, length=None):
         self.kind = kind
         self.text = text
         self.line = line
         self.col = col
+        self.length = length if length is not None else len(text.encode())
 
     def __repr__(self):
         return f"Token({self.kind!r}, {self.text!r}, {self.line}, {self.col})"
@@ -24,6 +25,9 @@ WORDS = {
     "int": "type", "long": "type", "flag": "type",
     "yes": "bool", "no": "bool",
     "equals": "cmp", "differs": "cmp",
+    "struct": "kw", "task": "kw", "giving": "kw", "give": "kw",
+    "of": "kw", "make": "kw", "print": "kw", "read": "kw",
+    "while": "kw", "for": "kw", "from": "kw", "to": "kw",
 }
 
 # the four emoji tokens: byte sequence -> (kind, text)
@@ -38,6 +42,7 @@ EMOJI = {
 SYMBOLS = {
     ord("+"): "op", ord("-"): "op", ord("*"): "op",
     ord(":"): "colon", ord("."): "dot",
+    ord("("): "lparen", ord(")"): "rparen", ord(","): "comma",
 }
 
 MAX_LONG = 9223372036854775807
@@ -88,6 +93,8 @@ def lex(data: bytes):
                 tokens.append(Token(SYMBOLS[b], chr(b), line, col))
             elif b == 0xF0:                  # first byte of a 4-byte emoji
                 state, start, sline, scol = "EMOJI", i, line, col
+            elif b == 34:                    # '"': a string literal begins
+                state, start, sline, scol = "STRING", i, line, col
             else:
                 raise CompileError(f"line {line}:{col}: unexpected byte {describe_byte(b)}")
 
@@ -128,6 +135,16 @@ def lex(data: bytes):
                     state = "START"
             else:
                 raise CompileError(f"line {sline}:{scol}: incomplete or unknown emoji")
+
+        elif state == "STRING":
+            if b is None or b == 10:         # end of file or of the line
+                raise CompileError(
+                    f"line {sline}:{scol}: string literal is not closed")
+            elif b == 34:                    # the closing '"'
+                text = data[start + 1:i].decode("latin-1")
+                tokens.append(Token("string", text, sline, scol,
+                                    length=i - start + 1))
+                state = "START"
 
         i += 1
         col += 1

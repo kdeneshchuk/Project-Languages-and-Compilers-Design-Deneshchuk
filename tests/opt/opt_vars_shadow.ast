@@ -1,0 +1,14 @@
+Program
+  VarDecl r int mut
+    Number 0
+  When
+    Bool true
+    Then
+      VarDecl x int const
+        Number 10
+      Assign r
+        Var x
+  Print
+    Var r
+  Tell
+    Var r

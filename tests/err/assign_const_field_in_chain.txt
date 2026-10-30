@@ -1,0 +1,9 @@
+struct Inner:
+  once changing int v.
+end.
+struct Outer:
+  once Inner in.
+end.
+once changing Outer o was make Outer(make Inner(1)).
+v of in of o became 2.
+tell 1.

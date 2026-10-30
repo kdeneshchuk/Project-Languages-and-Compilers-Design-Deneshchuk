@@ -1,0 +1,24 @@
+Program
+  Struct Point
+    Member x int const
+    Member y int const
+  VarDecl a Point const
+    Make Point
+      Number 1
+      Number 2
+  VarDecl shifted.p Point const
+    Var a
+  VarDecl shifted.dx int const
+    Number 10
+  VarDecl shifted.q Point const
+    Make Point
+      BinOp +
+        Field x of shifted.p
+        Var shifted.dx
+      Field y of shifted.p
+  VarDecl b Point const
+    Var shifted.q
+  Print
+    Var b
+  Tell
+    Field x of b

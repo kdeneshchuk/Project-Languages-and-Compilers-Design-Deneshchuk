@@ -1,0 +1,19 @@
+Program
+  VarDecl x int const
+    Number 100
+  VarDecl isBig.a int const
+    Var x
+  VarDecl isBig.r flag const
+    BinOp ==
+      Var isBig.a
+      Number 100
+  When
+    Var isBig.r
+    Then
+      Print
+        String "big"
+    Else
+      Print
+        String "small"
+  Tell
+    Var x

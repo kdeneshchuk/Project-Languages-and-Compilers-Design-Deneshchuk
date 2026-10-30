@@ -1,0 +1,5 @@
+task f() giving int:
+  give hidden.
+end.
+once int hidden was 5.
+tell f().

@@ -1,0 +1,204 @@
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+when no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+while no:
+print(1).
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+end.
+tell 0.

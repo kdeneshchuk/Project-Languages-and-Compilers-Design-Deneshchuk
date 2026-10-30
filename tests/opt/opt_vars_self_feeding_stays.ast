@@ -1,0 +1,15 @@
+Program
+  VarDecl k int mut
+    Number 0
+  For n
+    Number 1
+    Number 3
+    Body
+      Assign k
+        BinOp +
+          Var k
+          Number 1
+  Print
+    Number 1
+  Tell
+    Number 0

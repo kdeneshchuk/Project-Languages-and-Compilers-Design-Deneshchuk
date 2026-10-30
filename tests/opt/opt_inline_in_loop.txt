@@ -1,0 +1,11 @@
+task inc(int a) giving int:
+    once int r was a + 1.
+    give r.
+end.
+
+once changing int total was 0.
+for n from 1 to 3:
+    total became total + inc(n).
+end.
+print(total).
+tell total.

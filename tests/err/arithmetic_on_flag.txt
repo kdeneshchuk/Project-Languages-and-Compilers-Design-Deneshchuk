@@ -1,0 +1,3 @@
+once flag a was yes.
+once int b was a + 1.
+tell b.

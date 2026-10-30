@@ -1,0 +1,19 @@
+Program
+  Task add1 -> int
+    Param a int
+    Block
+      VarDecl s int const
+        BinOp +
+          Var a
+          Number 1
+      Give
+        Var s
+  VarDecl q int const
+    BinOp +
+      Read
+      Call add1
+        Number 1
+  Print
+    Var q
+  Tell
+    Var q

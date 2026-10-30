@@ -1,0 +1,4 @@
+task f() giving int:
+  give yes.
+end.
+tell f().

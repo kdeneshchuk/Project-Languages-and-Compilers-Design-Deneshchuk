@@ -1,0 +1,7 @@
+struct A:
+  once int x.
+end.
+struct A:
+  once int y.
+end.
+tell 1.

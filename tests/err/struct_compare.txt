@@ -1,0 +1,8 @@
+struct P:
+  once changing int x.
+  once int y.
+end.
+once P p was make P(1, 2).
+once P q was make P(1, 2).
+once flag f was p equals q.
+tell 1.

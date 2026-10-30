@@ -1,0 +1,3 @@
+once int n was 1.
+once int r was bump() of n.
+tell r.

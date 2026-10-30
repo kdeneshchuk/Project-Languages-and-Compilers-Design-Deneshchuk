@@ -1,0 +1,3 @@
+once changing int a was 1.
+a became yes.
+tell a.

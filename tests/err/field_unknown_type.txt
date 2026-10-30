@@ -1,0 +1,4 @@
+struct A:
+  once Ghost g.
+end.
+tell 1.

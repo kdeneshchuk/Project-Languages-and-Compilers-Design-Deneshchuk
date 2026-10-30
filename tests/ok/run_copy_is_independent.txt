@@ -1,0 +1,10 @@
+struct Point:
+  once changing int x.
+  once changing int y.
+end.
+once changing Point p was make Point(1, 2).
+once changing Point q was p.
+x of q became 100.
+print(p).
+print(q).
+tell x of p.

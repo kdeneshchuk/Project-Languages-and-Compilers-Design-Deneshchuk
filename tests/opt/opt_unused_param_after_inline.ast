@@ -1,0 +1,9 @@
+Program
+  VarDecl first.a int const
+    Number 4
+  VarDecl first.r int const
+    BinOp *
+      Var first.a
+      Number 2
+  Tell
+    Var first.r

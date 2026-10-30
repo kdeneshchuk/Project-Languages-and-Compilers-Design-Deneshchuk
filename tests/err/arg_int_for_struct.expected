@@ -1,0 +1,1 @@
+compilation error: line 8:8: cannot pass argument 1 of 'f' of type P with a value of type int

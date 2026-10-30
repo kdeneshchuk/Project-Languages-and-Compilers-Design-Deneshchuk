@@ -1,0 +1,4 @@
+task f() giving Ghost:
+  give 1.
+end.
+tell 1.

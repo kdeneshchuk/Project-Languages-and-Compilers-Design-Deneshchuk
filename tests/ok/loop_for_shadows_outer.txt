@@ -1,0 +1,5 @@
+once int n was 100.
+for n from 1 to 2:
+    print(n).
+end.
+tell n.

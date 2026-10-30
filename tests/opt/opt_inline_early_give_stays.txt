@@ -1,0 +1,8 @@
+task early(int a) giving int:
+    when a equals 0:
+        give 5.
+    end.
+    give a.
+end.
+
+tell early(0).

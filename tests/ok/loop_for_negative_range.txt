@@ -1,0 +1,4 @@
+for n from 0 - 2 to 2:
+    print(n).
+end.
+tell 0.

@@ -1,0 +1,24 @@
+Program
+  Task small -> flag
+    Param n int
+    Block
+      VarDecl r flag const
+        BinOp ==
+          Var n
+          Number 0
+      Give
+        Var r
+  VarDecl i int mut
+    Number 3
+  While
+    BinOp !=
+      Call small
+        Var i
+      Bool true
+    Body
+      Assign i
+        BinOp -
+          Var i
+          Number 1
+  Tell
+    Var i

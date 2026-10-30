@@ -1,0 +1,8 @@
+once changing int total was 0.
+for a from 1 to 3:
+    for b from 1 to 3:
+        once int p was a * b.
+        total became total + p.
+    end.
+end.
+tell total.

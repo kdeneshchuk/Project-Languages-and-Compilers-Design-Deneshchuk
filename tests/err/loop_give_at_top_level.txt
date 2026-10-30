@@ -1,0 +1,4 @@
+while yes:
+    give 1.
+end.
+tell 0.
