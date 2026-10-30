@@ -1,0 +1,13 @@
+once changing int i was 0.
+when yes:
+    once int t was 5.
+end.
+for n from 1 to 3:
+    once int u was n.
+end.
+while i differs 2:
+    once int w was i.
+    i became i + 1.
+end.
+print(i).
+tell i.

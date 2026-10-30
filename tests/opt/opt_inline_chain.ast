@@ -1,0 +1,15 @@
+Program
+  VarDecl helper.b int const
+    Number 5
+  VarDecl helper.twice.a int const
+    Var helper.b
+  VarDecl helper.twice.r int const
+    BinOp +
+      Var helper.twice.a
+      Var helper.twice.a
+  VarDecl helper.h int const
+    BinOp +
+      Var helper.twice.r
+      Number 1
+  Tell
+    Var helper.h

@@ -1,0 +1,16 @@
+struct Box:
+    once changing int v.
+    task bump() giving int:
+        v became v + twice(v).
+        give v.
+    end.
+end.
+
+task twice(int a) giving int:
+    once int r was a + a.
+    give r.
+end.
+
+once changing Box b was make Box(5).
+print(bump() of b).
+tell v of b.

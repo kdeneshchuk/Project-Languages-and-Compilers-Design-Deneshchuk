@@ -1,0 +1,24 @@
+Program
+  Struct Box
+    Member v int mut
+    MemberTask bump -> int
+      Block
+        VarDecl twice.a int const
+          Var v
+        VarDecl twice.r int const
+          BinOp +
+            Var twice.a
+            Var twice.a
+        Assign v
+          BinOp +
+            Var v
+            Var twice.r
+        Give
+          Var v
+  VarDecl b Box mut
+    Make Box
+      Number 5
+  Print
+    MemberCall bump of b
+  Tell
+    Field v of b

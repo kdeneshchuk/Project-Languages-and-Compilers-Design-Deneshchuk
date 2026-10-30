@@ -1,0 +1,13 @@
+Program
+  VarDecl double.a long const
+    Number 3
+  VarDecl double.r long const
+    BinOp +
+      Var double.a
+      Var double.a
+  VarDecl x long const
+    Var double.r
+  Print
+    Var x
+  Tell
+    Var x

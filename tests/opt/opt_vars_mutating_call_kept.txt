@@ -1,0 +1,12 @@
+struct Counter:
+    once changing int n.
+    task bump() giving int:
+        n became n + 1.
+        give n.
+    end.
+end.
+
+once changing Counter c was make Counter(0).
+once int unused was bump() of c.
+print(c).
+tell 0.

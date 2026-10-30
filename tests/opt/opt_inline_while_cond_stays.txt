@@ -1,0 +1,10 @@
+task small(int n) giving flag:
+    once flag r was n equals 0.
+    give r.
+end.
+
+once changing int i was 3.
+while small(i) differs yes:
+    i became i - 1.
+end.
+tell i.

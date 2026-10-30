@@ -1,0 +1,8 @@
+task double(long a) giving long:
+    once long r was a + a.
+    give r.
+end.
+
+once long x was double(3).
+print(x).
+tell x.

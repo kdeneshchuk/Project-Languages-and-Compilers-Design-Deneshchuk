@@ -1,0 +1,17 @@
+Program
+  Task wide -> long
+    Param a int
+    Block
+      VarDecl r int const
+        BinOp +
+          Var a
+          Number 1
+      Give
+        Var r
+  VarDecl big long const
+    Call wide
+      Number 4
+  Print
+    Var big
+  Tell
+    Var big

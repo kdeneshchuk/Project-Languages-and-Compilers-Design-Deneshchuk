@@ -1,0 +1,8 @@
+task wide(int a) giving long:
+    once int r was a + 1.
+    give r.
+end.
+
+once long big was wide(4).
+print(big).
+tell big.

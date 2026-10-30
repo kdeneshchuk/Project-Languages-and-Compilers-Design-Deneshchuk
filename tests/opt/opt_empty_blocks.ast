@@ -1,0 +1,23 @@
+Program
+  VarDecl i int mut
+    Number 0
+  When
+    Bool true
+    Then
+  For n
+    Number 1
+    Number 3
+    Body
+  While
+    BinOp !=
+      Var i
+      Number 2
+    Body
+      Assign i
+        BinOp +
+          Var i
+          Number 1
+  Print
+    Var i
+  Tell
+    Var i

@@ -1,0 +1,6 @@
+task first(int a, int b) giving int:
+    once int r was a * 2.
+    give r.
+end.
+
+tell first(4, read()).
