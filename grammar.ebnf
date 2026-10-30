@@ -5,8 +5,8 @@
 
 program      ::= { struct_decl } { task_decl } { statement } tell_stmt
 
-statement    ::= const_decl | var_decl | assign | when_stmt
-               | print_stmt | give_stmt
+while_stmt   ::= "while" expr ":" block "end" "."
+for_stmt     ::= "for" ident "from" expr "to" expr ":" block "end" "."
 
 (* ---------- structures ---------- *)
 
@@ -28,6 +28,8 @@ const_decl   ::= "always" builtin_type ident "is" literal "."
 var_decl     ::= "once" [ "changing" ] type ident "was" expr "."
 assign       ::= access "became" expr "."
 when_stmt    ::= "when" expr ":" block [ "otherwise" ":" block ] "end" "."
+while_stmt   ::= "while" expr ":" block "end" "."
+for_stmt     ::= "for" ident "from" expr "to" expr ":" block "end" "."
 print_stmt   ::= "print" "(" ( string | expr ) ")" "."
 give_stmt    ::= "give" factor "."
 tell_stmt    ::= "tell" factor "."
@@ -92,6 +94,7 @@ digit        ::= "0" .. "9"
      always  once  changing  is  was  became
      when  otherwise  end  tell
      struct  task  giving  give  of  make  print  read
+     while  for  from  to
      int  long  flag
      equals  differs  yes  no                                      *)
 
@@ -114,7 +117,8 @@ digit        ::= "0" .. "9"
        int  : 0 .. 2147483647
        long : 0 .. 9223372036854775807
      there is no sign, so a literal is never negative;
-   - "when" blocks may be nested at most 100 levels deep.            *)
+  - "when", "while" and "for" blocks may be nested at most 100 levels deep
+    (one shared counter);            *)
 
 (* Done by the parser (stage 2):
    - program order: structs, then tasks, then statements, then "tell";

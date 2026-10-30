@@ -27,6 +27,7 @@ WORDS = {
     "equals": "cmp", "differs": "cmp",
     "struct": "kw", "task": "kw", "giving": "kw", "give": "kw",
     "of": "kw", "make": "kw", "print": "kw", "read": "kw",
+    "while": "kw", "for": "kw", "from": "kw", "to": "kw",
 }
 
 # the four emoji tokens: byte sequence -> (kind, text)
