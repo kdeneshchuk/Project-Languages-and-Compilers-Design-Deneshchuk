@@ -1,13 +1,19 @@
-"""Runs every test in tests/ok and tests/err and says which ones failed.
+"""Runs every test and says which ones failed. With --optimize every program is
+   compiled with the optimizer.
 
-tests/ok/NAME.txt   a valid program
-    NAME.ast        (optional) the expected `compiler.py --ast` output
-    NAME.expected   (optional) the expected standard output of the compiled
-                    program; with it the test is end to end: compile, build, run
-    NAME.in         (optional) the standard input of the compiled program
-tests/err/NAME.txt  an invalid program
-    NAME.expected   the expected error line (stderr of the compiler)
-"""
+   tests/ok/NAME.txt   a valid program
+       NAME.ast        (optional) the expected `compiler.py --ast` output
+       NAME.expected   (optional) the expected standard output; with it the test
+                       is end to end: compile, build, run
+       NAME.in         (optional) the standard input of the compiled program
+   tests/err/NAME.txt  an invalid program
+       NAME.expected   the expected error line (stderr of the compiler)
+   tests/opt/NAME.txt  a program for the optimizer
+       NAME.ast        the expected `--optimize --ast` output
+       NAME.expected   the output, the same with and without --optimize
+   programs/NAME_SESSION.in, .expected
+                       a recorded session of programs/NAME.txt, run as a native binary
+   """
 
 import glob
 import os

@@ -600,7 +600,8 @@ clang -fPIE output.o -o program && ./program
 
 `--ast` prints the tree after parsing, so it reports lexical and syntax
 errors but does not run the semantic pass. The semantic pass runs when a
-program is compiled to `output.ll`.
+program is compiled to `output.ll`. With `--optimize`, `--ast` runs the
+semantic pass and the optimizer first and prints the optimized tree.
 
 On any error, lexical, syntax or semantic, the compiler prints one line to
 stderr, exits with a non-zero code and writes no output file:
