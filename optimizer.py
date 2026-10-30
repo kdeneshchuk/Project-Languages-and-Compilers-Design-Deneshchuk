@@ -67,9 +67,29 @@ def is_dead(stmt, dead):
     return False
 
 
+def count_calls(node, counts):
+    """Count the calls of every global task, by the identity of its declaration."""
+    if isinstance(node, CallNode) and node.task is not None:
+        counts[id(node.task)] = counts.get(id(node.task), 0) + 1
+    for child in node.children():
+        count_calls(child, counts)
+
+
+def remove_unused_tasks(tree):
+    """One round. Returns True when a task was removed."""
+    counts = {}
+    count_calls(tree, counts)
+    kept = [t for t in tree.tasks if counts.get(id(t), 0) > 0]
+    if len(kept) == len(tree.tasks):
+        return False
+    tree.tasks[:] = kept
+    return True
+
+
 def optimize(tree):
     """Run the transformations until a round changes nothing."""
     changed = True
     while changed:
         changed = remove_unused_variables(tree)
+        changed = remove_unused_tasks(tree) or changed
     return tree
