@@ -11,6 +11,8 @@ language a lexer, a parser and an AST. Stage 2 made it run: tasks
 semantic pass and code generation to LLVM IR through `llvmlite`. Stage 3 adds
 one feature of its own: loops, `while` and `for` over an integer range (see
 [Loops](#loops)).
+The stage also brings a real program, a two-player guessing game written in
+Telly (see [A real program](#a-real-program-the-guessing-game)).
 
 ```
 always int LEGAL_AGE is 18.
@@ -247,7 +249,7 @@ at that line.
 4. An `int` widens into `long` where a `long` is expected: an initialiser, an
    assignment, a field, an argument, a `give`. Nothing else converts: a
    `long` never narrows, and a `flag` never meets a number.
-5. The condition of `when` is a `flag`.
+5. The condition of `when` and of `while` is a `flag`.
 6. Overflow is checked by type, not by value. A number written next to its
    type must fit it (`once int z was 2147483648.` is an error). A `long`
    expression cannot go into an `int` (`once int x was 5 + 3000000000.` and
@@ -643,6 +645,47 @@ end, including the edge cases (an empty range, a bound of 2147483647, nested
 loops, a loop inside a task and a member function), and `tests/err/loop_*`
 break each rule of Loops.
 
+The recorded sessions of `programs/` are run by the same script, as native
+binaries built with `llc` and `clang`, and they appear in the output as `prog`.
+
+## A real program: the guessing game
+
+`programs/guess.txt` is a game for two players, played in turns at one
+keyboard. It asks how many rounds to play. In every round the first player
+types a secret number from 1 to 100, and the second one has seven guesses; the
+program answers `Too low.` or `Too high.` after each. A hit gives
+`8 - attempts` points, so the first try is worth 7 and the seventh is worth 1;
+a round that runs out of attempts gives nothing. The total is printed at the end.
+
+It uses the whole language of the project. The struct `Game` keeps the secret
+number and the count of attempts, and its member functions `check` and
+`secretIsAbove` do the work; the task `points` counts the score; `read` and
+`print` are the dialogue. The loops are the core of it: a `for` over the
+rounds contains a `while` over the guesses, `secretIsAbove` searches with a
+`for` and leaves it with `give`, and `playing`, `answer` and the object `g`
+are declared inside the body of the outer loop, so each round gets them again
+with fresh values.
+
+Build it into a native binary (`lli` is not used):
+
+```bash
+python3 compiler.py programs/guess.txt /tmp/guess.ll
+llc -filetype=obj -relocation-model=pic /tmp/guess.ll -o /tmp/guess.o
+clang -fPIE /tmp/guess.o -o /tmp/guess
+```
+
+Two recorded sessions are kept next to the program: `NAME.in` is what the
+user types and `NAME.expected` is the exact output, prompts included.
+
+```bash
+/tmp/guess < programs/guess_win_lose.in     # two rounds: a win in 3 tries, a loss; total 5
+/tmp/guess < programs/guess_first_try.in    # one round, a hit at the first try; total 7
+```
+
+`python3 run_tests.py` builds the program the same way and compares both
+sessions with their `.expected` files. A session is named `guess_<what>`: the
+part before the first `_` is the program it runs.
+
 ## VS Code extension (optional)
 
 `vscode-telly/` supports files with the extension `.telly`, or any file whose
@@ -680,6 +723,7 @@ reload the window.
 | `codegen.py` | code generation through the `llvmlite` builder |
 | `compiler.py` | the command line |
 | `run_tests.py` | the test runner |
+| `programs/` | the real program, `guess.txt`, and its recorded sessions (`.in` and `.expected`) |
 | `vscode-telly/` | an optional [VS Code extension](#vs-code-extension-optional): highlighting, snippets, 👍 👎 🟰 🚫 completions and the compiler's errors under the code |
 
 The lexer reads bytes, not characters. An emoji is four bytes, recognised as
