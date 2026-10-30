@@ -228,6 +228,46 @@ class CodeGen:
 
         self.builder.position_at_end(merge_bb)
 
+    def visit_WhileNode(self, node):
+        cond_bb = self.function.append_basic_block("while.cond")
+        body_bb = self.function.append_basic_block("while.body")
+        end_bb = self.function.append_basic_block("while.end")
+        self.builder.branch(cond_bb)                    # leave the current block
+
+        self.builder.position_at_end(cond_bb)           # the condition is tested on every turn
+        cond = self.visit(node.cond)
+        self.builder.cbranch(cond, body_bb, end_bb)
+
+        self.builder.position_at_end(body_bb)
+        self.visit(node.body)
+        if not self.builder.block.is_terminated:        # a body that ends with 'give' has its ret
+            self.builder.branch(cond_bb)                # the back edge
+
+        self.builder.position_at_end(end_bb)
+
+    def visit_ForNode(self, node):
+        start = self.visit(node.start)                  # both bounds once, left to right
+        end = self.visit(node.end)
+        node.symbol.ptr = self.new_slot(I32, node.name)
+        self.builder.store(start, node.symbol.ptr)
+        body_bb = self.function.append_basic_block("for.body")
+        end_bb = self.function.append_basic_block("for.end")
+        enter = self.builder.icmp_signed("<=", start, end)
+        self.builder.cbranch(enter, body_bb, end_bb)    # from 5 to 1: no turn at all
+
+        self.builder.position_at_end(body_bb)
+        self.visit(node.body)
+        if not self.builder.block.is_terminated:
+            step_bb = self.function.append_basic_block("for.step")
+            current = self.builder.load(node.symbol.ptr)
+            done = self.builder.icmp_signed("==", current, end)     # tested BEFORE the increment
+            self.builder.cbranch(done, end_bb, step_bb)
+            self.builder.position_at_end(step_bb)
+            self.builder.store(self.builder.add(current, ir.Constant(I32, 1)), node.symbol.ptr)
+            self.builder.branch(body_bb)                # the back edge
+
+        self.builder.position_at_end(end_bb)
+
     def visit_GiveNode(self, node):
         value = self.visit(node.value)
         value = self.coerce(value, node.value.type, self.current_task.result_type)
