@@ -1,0 +1,9 @@
+struct Point:
+    once int x.
+    once int y.
+end.
+
+for n from 1 to 3:
+    print(make Point(n, n * n)).
+end.
+tell 0.

@@ -1,0 +1,8 @@
+struct P:
+    once int x.
+end.
+
+for P from 1 to 3:
+    print(1).
+end.
+tell 0.

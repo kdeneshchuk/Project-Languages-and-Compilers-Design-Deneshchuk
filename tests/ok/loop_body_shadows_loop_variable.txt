@@ -1,0 +1,5 @@
+for n from 1 to 2:
+    once int n was n * 10.
+    print(n).
+end.
+tell 0.

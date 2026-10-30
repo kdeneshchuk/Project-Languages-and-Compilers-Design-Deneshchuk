@@ -1,0 +1,5 @@
+once changing int i was 1.
+while i:
+    i became 2.
+end.
+tell i.

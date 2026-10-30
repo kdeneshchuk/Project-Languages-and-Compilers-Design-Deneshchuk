@@ -1,0 +1,22 @@
+Program
+  VarDecl i int mut
+    Number 1
+  VarDecl sum int mut
+    Number 0
+  While
+    BinOp !=
+      Var i
+      Number 6
+    Body
+      Assign sum
+        BinOp +
+          Var sum
+          Var i
+      Assign i
+        BinOp +
+          Var i
+          Number 1
+  Print
+    Var sum
+  Tell
+    Var i

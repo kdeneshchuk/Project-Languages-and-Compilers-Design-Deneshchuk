@@ -1,0 +1,6 @@
+task f() giving int:
+    while yes:
+        give 1.
+    end.
+end.
+tell 0.

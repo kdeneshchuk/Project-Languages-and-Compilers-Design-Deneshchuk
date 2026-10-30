@@ -1,0 +1,6 @@
+once changing int i was 0.
+while i differs 2:
+    once int t was i.
+    i became i + 1.
+end.
+tell t.

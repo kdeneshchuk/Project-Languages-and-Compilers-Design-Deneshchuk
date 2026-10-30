@@ -1,0 +1,4 @@
+once changing int i was 1.
+while i differs 6:
+end.
+tell i.

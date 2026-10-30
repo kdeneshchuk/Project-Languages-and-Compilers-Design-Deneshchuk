@@ -1,0 +1,7 @@
+once changing int total was 0.
+once changing int x was read().
+while x differs 0:
+    total became total + x.
+    x became read().
+end.
+tell total.

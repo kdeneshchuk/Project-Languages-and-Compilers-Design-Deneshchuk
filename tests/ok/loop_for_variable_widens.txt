@@ -1,0 +1,5 @@
+once changing long total was 0.
+for n from 1 to 3:
+    total became total + n * 3000000000.
+end.
+tell total.

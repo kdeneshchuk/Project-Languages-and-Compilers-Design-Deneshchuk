@@ -1,0 +1,5 @@
+for n from 1 to 2:
+    once int t was 1.
+    once int t was 2.
+end.
+tell 0.

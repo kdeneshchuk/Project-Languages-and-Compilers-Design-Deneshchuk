@@ -1,0 +1,5 @@
+while no:
+    print("never").
+end.
+print("after").
+tell 0.

@@ -1,0 +1,7 @@
+once changing int count was 0.
+for a from 1 to 3:
+    for b from a to 3:
+        count became count + 1.
+    end.
+end.
+tell count.

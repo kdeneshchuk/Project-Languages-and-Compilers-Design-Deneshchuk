@@ -1,0 +1,9 @@
+task bound() giving int:
+    print("bound").
+    give 3.
+end.
+
+for n from 1 to bound():
+    print(n).
+end.
+tell 0.
