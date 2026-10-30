@@ -1,0 +1,18 @@
+Program
+  Task loud -> int
+    Param a int
+    Block
+      Print
+        Var a
+      Give
+        Var a
+  VarDecl x int mut
+    Number 0
+  Assign x
+    Call loud
+      Number 7
+  Assign x
+    Call loud
+      Number 8
+  Tell
+    Number 0
