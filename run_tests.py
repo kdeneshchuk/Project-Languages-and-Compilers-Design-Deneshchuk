@@ -93,6 +93,37 @@ def check_error(name_path):
         return f"error line differs\n      expected: {expected!r}\n      got:      {line!r}"
     return None
 
+def execute_native(ll_path, tmp, stdin):
+    """Build a native binary with llc and clang and run it: lli is not enough for a program."""
+    obj, exe = os.path.join(tmp, "program.o"), os.path.join(tmp, "program")
+    built = run(["llc", "-filetype=obj", "-relocation-model=pic", ll_path, "-o", obj])
+    if built.returncode == 0:
+        built = run(["clang", "-fPIE", obj, "-o", exe])
+    if built.returncode != 0:
+        return built
+    return run([exe], stdin)
+
+
+def check_program(session_path):
+    """A recorded session: programs/NAME_SESSION.in and .expected run programs/NAME.txt."""
+    folder, session = os.path.split(session_path)
+    source = os.path.join(folder, session.split("_")[0] + ".txt")
+    with open(session_path + ".in", "rb") as f:
+        stdin = f.read()
+    expected = read_text(session_path + ".expected")
+    with tempfile.TemporaryDirectory() as tmp:
+        ll = os.path.join(tmp, "out.ll")
+        built = compile_program(source, ll)
+        if built.returncode != 0:
+            return f"does not compile: {built.stderr.decode('utf-8', 'replace').strip()}"
+        done = execute_native(ll, tmp, stdin)
+        if done.returncode != 0:
+            return f"the build or the run failed (code {done.returncode}): " \
+                   f"{done.stderr.decode('utf-8', 'replace').strip()}"
+        got = done.stdout.decode("utf-8", "replace")
+        if got != expected:
+            return f"output differs\n      expected: {expected!r}\n      got:      {got!r}"
+    return None
 
 def main():
     failed = []
@@ -125,6 +156,12 @@ def main():
         base = src[:-4]
         counts["invalid"] += 1
         report("err", os.path.basename(base), check_error(base))
+
+    for exp in sorted(glob.glob(os.path.join(ROOT, "programs", "*.expected"))):
+        base = exp[:-len(".expected")]
+        counts["valid"] += 1
+        counts["end to end"] += 1
+        report("prog", os.path.basename(base), check_program(base))
 
     total = counts["valid"] + counts["invalid"]
     print(f"\n{total - len(failed)}/{total} passed "
