@@ -1,0 +1,48 @@
+struct Game:
+    once int secret.
+    once changing int attempts.
+    task secretIsAbove(int guess) giving flag:
+        for n from guess to LIMIT:
+            when n equals secret:
+                give yes.
+            end.
+        end.
+        give no.
+    end.
+    task check(int guess) giving int:
+        attempts became attempts + 1.
+        when guess equals secret:
+            give 0.
+        end.
+        when secretIsAbove(guess):
+            give 1.
+        end.
+        give 2.
+    end.
+end.
+
+always int LIMIT is 100.
+always int MAX_ATTEMPTS is 7.
+
+print("Player one, enter the secret number (1-100):").
+once changing Game g was make Game(read(), 0).
+once changing flag playing was yes.
+while playing:
+    print("Player two, your guess:").
+    once int answer was check(read()) of g.
+    when answer equals 0:
+        print("Correct!").
+        playing became no.
+    otherwise:
+        when answer equals 1:
+            print("Too low.").
+        otherwise:
+            print("Too high.").
+        end.
+        when attempts of g equals MAX_ATTEMPTS:
+            print("Out of attempts.").
+            playing became no.
+        end.
+    end.
+end.
+tell attempts of g.
