@@ -19,6 +19,7 @@ import tempfile
 ROOT = os.path.dirname(os.path.abspath(__file__))
 COMPILER = os.path.join(ROOT, "compiler.py")
 TIMEOUT = 20
+OPTIMIZE = "--optimize" in sys.argv[1:]
 
 
 def read_text(path):
@@ -31,7 +32,10 @@ def run(cmd, stdin=b""):
 
 
 def compile_program(source, out_ll):
-    return run([sys.executable, COMPILER, source, out_ll])
+    cmd = [sys.executable, COMPILER]
+    if OPTIMIZE:
+        cmd.append("--optimize")
+    return run(cmd + [source, out_ll])
 
 
 def execute(ll_path, tmp, stdin):
