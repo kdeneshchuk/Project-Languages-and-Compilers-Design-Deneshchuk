@@ -330,11 +330,18 @@ class Parser:
             return False
         if tok.kind == "ident":
             return True
-        return tok.kind == "kw" and tok.text in ("always", "once", "when", "print", "give")
+        return tok.kind == "kw" and tok.text in (
+            "always", "once", "when", "while", "for", "print", "give")
 
     def starts_with(self, word):
         tok = self.peek()
         return tok is not None and tok.kind == "kw" and tok.text == word
+
+    def enter_nesting(self, tok):
+        """One counter for when, while and for: together they nest at most MAX_DEPTH levels."""
+        self.depth += 1
+        if self.depth > MAX_DEPTH:
+            self.error(f"'{tok.text}' is nested deeper than {MAX_DEPTH} levels", at=tok)
 
     def parse_statement(self):               # const_decl | var_decl | assign | when_stmt
         tok = self.peek()
@@ -344,6 +351,10 @@ class Parser:
             return self.parse_var_decl()
         if tok.kind == "kw" and tok.text == "when":
             return self.parse_when()
+        if tok.kind == "kw" and tok.text == "while":
+            return self.parse_while()
+        if tok.kind == "kw" and tok.text == "for":
+            return self.parse_for()
         if tok.kind == "kw" and tok.text == "print":
             return self.parse_print()
         if tok.kind == "kw" and tok.text == "give":
@@ -371,9 +382,7 @@ class Parser:
 
     def parse_when(self):                    # "when" expr ":" block ["otherwise" ":" block] "end" "."
         when = self.eat()
-        self.depth += 1
-        if self.depth > MAX_DEPTH:
-            self.error(f"'when' is nested deeper than {MAX_DEPTH} levels", at=when)
+        self.enter_nesting(when)
         cond = self.parse_expr()
         self.expect("colon", "':'")
         then_block = self.parse_block()
@@ -387,6 +396,32 @@ class Parser:
         self.expect("dot", "'.'")
         self.depth -= 1
         return WhenNode(when.line, when.col, cond, then_block, else_block)
+
+    def parse_while(self):                   # "while" expr ":" block "end" "."
+        loop = self.eat()
+        self.enter_nesting(loop)
+        cond = self.parse_expr()
+        self.expect("colon", "':'")
+        body = self.parse_block()
+        self.expect("kw", "'end'", "end")
+        self.expect("dot", "'.'")
+        self.depth -= 1
+        return WhileNode(loop.line, loop.col, cond, body)
+
+    def parse_for(self):                     # "for" ident "from" expr "to" expr ":" block "end" "."
+        loop = self.eat()
+        self.enter_nesting(loop)
+        name = self.expect_name("a loop variable name")
+        self.expect("kw", "'from'", "from")
+        start = self.parse_expr()
+        self.expect("kw", "'to'", "to")
+        end = self.parse_expr()
+        self.expect("colon", "':'")
+        body = self.parse_block()
+        self.expect("kw", "'end'", "end")
+        self.expect("dot", "'.'")
+        self.depth -= 1
+        return ForNode(loop.line, loop.col, name.text, (name.line, name.col), start, end, body)
 
     def parse_program(self):                 # program ::= { struct } { task } { statement } tell_stmt
         structs, tasks, statements = [], [], []

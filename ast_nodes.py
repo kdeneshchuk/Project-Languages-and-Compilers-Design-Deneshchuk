@@ -216,6 +216,36 @@ class WhenNode(StmtNode):
             kids.append(self.else_block)
         return kids
 
+class WhileNode(StmtNode):
+    def __init__(self, line, col, cond, body):
+        super().__init__(line, col)
+        self.cond = cond
+        self.body = body
+        body.title = "Body"
+
+    def label(self):
+        return "While"
+
+    def children(self):
+        return [self.cond, self.body]
+
+
+class ForNode(StmtNode):
+    """for n from A to B: the variable n belongs to the loop."""
+    def __init__(self, line, col, name, name_pos, start, end, body):
+        super().__init__(line, col)
+        self.name = name
+        self.name_pos = name_pos    # (line, col) of the name: where errors about it are reported
+        self.start = start          # an expression, evaluated once before the loop
+        self.end = end              # an expression, evaluated once before the loop
+        self.body = body
+        body.title = "Body"
+
+    def label(self):
+        return f"For {self.name}"
+
+    def children(self):
+        return [self.start, self.end, self.body]
 
 class PrintNode(StmtNode):
     def __init__(self, line, col, value):
