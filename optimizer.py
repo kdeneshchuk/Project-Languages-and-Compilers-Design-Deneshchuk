@@ -85,6 +85,63 @@ def remove_unused_tasks(tree):
     tree.tasks[:] = kept
     return True
 
+def calls_in(node):
+    """Every global task called anywhere below this node, with repeats."""
+    found = []
+    if isinstance(node, CallNode) and node.task is not None:
+        found.append(node.task)
+    for child in node.children():
+        found.extend(calls_in(child))
+    return found
+
+
+def recursive_tasks(tree):
+    """The tasks that can reach themselves through calls, directly or through other tasks."""
+    graph = {id(t): {id(c) for c in calls_in(t.body)} for t in tree.tasks}
+    recursive = set()
+    for t in tree.tasks:
+        seen, todo = set(), list(graph[id(t)])
+        while todo:
+            key = todo.pop()
+            if key == id(t):
+                recursive.add(id(t))
+                break
+            if key in seen or key not in graph:
+                continue
+            seen.add(key)
+            todo.extend(graph[key])
+    return recursive
+
+
+def has_early_give(block):
+    """A give anywhere except as the last statement of the body itself."""
+    for stmt in block.statements[:-1]:
+        if contains_give(stmt):
+            return True
+    return contains_give_inside(block.statements[-1])
+
+
+def contains_give(node):
+    if isinstance(node, GiveNode):
+        return True
+    return any(contains_give(child) for child in node.children())
+
+
+def contains_give_inside(last):
+    """The last statement is a give: fine. Anything else with a give inside is not simple."""
+    return not isinstance(last, GiveNode) and contains_give(last)
+
+
+def inline_candidates(tree):
+    """Tasks called exactly once, not recursive and with a body of a simple shape."""
+    counts = {}
+    count_calls(tree, counts)
+    recursive = recursive_tasks(tree)
+    return [t for t in tree.tasks
+            if counts.get(id(t), 0) == 1
+            and id(t) not in recursive
+            and not has_early_give(t.body)]
+
 
 def optimize(tree):
     """Run the transformations until a round changes nothing."""
@@ -93,3 +150,11 @@ def optimize(tree):
         changed = remove_unused_variables(tree)
         changed = remove_unused_tasks(tree) or changed
     return tree
+
+def debug_report(tree):
+    names = lambda ts: sorted(t.name for t in ts)
+    counts = {}
+    count_calls(tree, counts)
+    print("calls:", {t.name: counts.get(id(t), 0) for t in tree.tasks})
+    print("recursive:", names(t for t in tree.tasks if id(t) in recursive_tasks(tree)))
+    print("candidates:", names(inline_candidates(tree)))
